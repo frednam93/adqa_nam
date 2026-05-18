@@ -1,0 +1,12 @@
+transformers==4.52.3
+datasets==3.6.0
+numpy<2.0.0
+accelerate
+librosa
+soundfile==0.12.1
+protobuf==4.25
+pyarrow==18.1.0
+conformer==0.3.2
+omegaconf==2.3.0
+loguru
+rich==13.7.1

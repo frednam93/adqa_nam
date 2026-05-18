@@ -1,0 +1,56 @@
+diff --git a/training/data/dataset_info.json b/training/data/dataset_info.json
+--- a/training/data/dataset_info.json
++++ b/training/data/dataset_info.json
+@@
++  "dcase_adqa_qwen3_omni_train": {
++    "file_name": "/home/user/ssdmain/datasets/dcase2026_task5/qwen3_omni_sft/train.jsonl",
++    "formatting": "sharegpt",
++    "columns": {
++      "system": "system",
++      "messages": "messages",
++      "audios": "audios"
++    },
++    "tags": {
++      "role_tag": "role",
++      "content_tag": "content",
++      "user_tag": "user",
++      "assistant_tag": "assistant"
++    }
++  },
++  "dcase_adqa_qwen3_omni_dev": {
++    "file_name": "/home/user/ssdmain/datasets/dcase2026_task5/qwen3_omni_sft/dev.jsonl",
++    "formatting": "sharegpt",
++    "columns": {
++      "system": "system",
++      "messages": "messages",
++      "audios": "audios"
++    },
++    "tags": {
++      "role_tag": "role",
++      "content_tag": "content",
++      "user_tag": "user",
++      "assistant_tag": "assistant"
++    }
++  }
+diff --git a/third_party/LLaMA-Factory/src/llamafactory/model/loader.py b/third_party/LLaMA-Factory/src/llamafactory/model/loader.py
+--- a/third_party/LLaMA-Factory/src/llamafactory/model/loader.py
++++ b/third_party/LLaMA-Factory/src/llamafactory/model/loader.py
+@@
+     init_kwargs = _get_init_kwargs(model_args)
+     config = load_config(model_args)
++    if getattr(config, "model_type", None) == "qwen3_omni_moe":
++        # DCASE ADQA only needs text answers. Loading the talker/code2wav stack
++        # first and then discarding it OOMs on a 32 GB GPU even for QLoRA.
++        config.enable_audio_output = False
+     patch_config(config, tokenizer, model_args, init_kwargs, is_trainable)
+diff --git a/third_party/LLaMA-Factory/src/llamafactory/model/model_utils/quantization.py b/third_party/LLaMA-Factory/src/llamafactory/model/model_utils/quantization.py
+--- a/third_party/LLaMA-Factory/src/llamafactory/model/model_utils/quantization.py
++++ b/third_party/LLaMA-Factory/src/llamafactory/model/model_utils/quantization.py
+@@
+                 check_version("bitsandbytes>=0.43.0", mandatory=True)
++                if model_args.quantization_device_map == "auto":
++                    from accelerate.utils import get_max_memory
++
++                    init_kwargs["device_map"] = "auto"
++                    init_kwargs["max_memory"] = get_max_memory()
+             else:

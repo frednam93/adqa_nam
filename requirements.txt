@@ -1,0 +1,9 @@
+accelerate
+datasets
+huggingface_hub
+librosa
+soundfile
+torch
+torchaudio
+transformers>=4.45.0
+tqdm
