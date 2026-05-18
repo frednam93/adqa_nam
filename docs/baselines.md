@@ -18,3 +18,24 @@
 2. Reproduce Fun-Audio-Chat because it is below the 10B lightweight threshold and has official code.
 3. Use Qwen2-Audio only if the official models are blocked, and label it clearly as a harness smoke test.
 4. Add answer-choice permutation robustness after one official baseline is running.
+
+## Extra Open ALM Targets
+
+- `nvidia/audio-flamingo-3-hf`: highest-priority non-DCASE open ALM target. Requires a newer Transformers build than the FunAudio/Qwen3 env, so use `dcase_open_alm`.
+- `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-NVFP4`: newest 30B-A3B open omni target. Use vLLM OpenAI-compatible serving first; direct Python eval is not the preferred path.
+- `Qwen3.5-Omni`: technical-report-only for now. Keep as a placeholder until public/local weights exist.
+
+Setup:
+
+```bash
+bash scripts/install_open_alm_deps.sh
+bash scripts/download_open_alm_models.sh
+```
+
+Eval:
+
+```bash
+bash scripts/eval_audioflamingo3_dev.sh --limit 20
+bash scripts/serve_nemotron3_nano_omni_vllm.sh
+bash scripts/eval_nemotron3_nano_omni_dev.sh --limit 20
+```

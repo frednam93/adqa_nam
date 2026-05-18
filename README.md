@@ -59,3 +59,30 @@ python -m dcase_adqa.eval_qwen2_audio \
 ```
 
 The eval script uses exact answer matching against the candidate text and stores raw generations for debugging.
+
+## Extra Open ALM Eval
+
+The extra open-ALM targets are isolated from the active FunAudio/Qwen3 training
+environment because Audio Flamingo 3 requires a newer Transformers build and
+Nemotron is best served through vLLM.
+
+```bash
+bash scripts/install_open_alm_deps.sh
+bash scripts/download_open_alm_models.sh
+```
+
+Audio Flamingo 3:
+
+```bash
+bash scripts/eval_audioflamingo3_dev.sh --limit 20
+```
+
+Nemotron 3 Nano Omni:
+
+```bash
+bash scripts/serve_nemotron3_nano_omni_vllm.sh
+bash scripts/eval_nemotron3_nano_omni_dev.sh --limit 20
+```
+
+`Qwen3.5-Omni` is tracked as a placeholder only; no public/local weights are
+configured yet.
