@@ -18,6 +18,11 @@ bash scripts/eval_audioflamingo3_dev.sh \
   --output "${ROOT}/outputs/audioflamingo3_dev_smoke1.jsonl" \
   2>&1 | tee "${LOG_DIR}/audioflamingo3_smoke_$(date +%Y%m%d_%H%M%S).log"
 
+echo "$(date '+%Y-%m-%d %H:%M:%S') AF3 full dev eval start"
+bash scripts/eval_audioflamingo3_dev.sh \
+  --output "${ROOT}/outputs/audioflamingo3_dev_full.jsonl" \
+  2>&1 | tee "${LOG_DIR}/audioflamingo3_dev_full_$(date +%Y%m%d_%H%M%S).log"
+
 echo "$(date '+%Y-%m-%d %H:%M:%S') Nemotron vLLM smoke start"
 PORT="${PORT:-8011}"
 PORT="${PORT}" bash scripts/serve_nemotron3_nano_omni_vllm.sh \
@@ -50,4 +55,10 @@ PORT="${PORT}" bash scripts/eval_nemotron3_nano_omni_dev.sh \
   --output "${ROOT}/outputs/nemotron3_nano_omni_dev_smoke1.jsonl" \
   2>&1 | tee "${LOG_DIR}/nemotron3_smoke_$(date +%Y%m%d_%H%M%S).log"
 
-echo "$(date '+%Y-%m-%d %H:%M:%S') open ALM smoke done"
+echo "$(date '+%Y-%m-%d %H:%M:%S') Nemotron full dev eval start"
+PORT="${PORT}" bash scripts/eval_nemotron3_nano_omni_dev.sh \
+  --audio-mode data_url \
+  --output "${ROOT}/outputs/nemotron3_nano_omni_dev_full.jsonl" \
+  2>&1 | tee "${LOG_DIR}/nemotron3_dev_full_$(date +%Y%m%d_%H%M%S).log"
+
+echo "$(date '+%Y-%m-%d %H:%M:%S') open ALM smoke and full dev eval done"
