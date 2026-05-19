@@ -8,7 +8,13 @@ conda activate FunAudioChat
 cd "${ROOT}"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-for ckpt in "${RUN}"/checkpoint-* "${RUN}"; do
+for ckpt in \
+  "${RUN}/checkpoint-3000" \
+  "${RUN}/checkpoint-6000" \
+  "${RUN}/checkpoint-9000" \
+  "${RUN}/checkpoint-12000" \
+  "${RUN}"
+do
   [[ -d "${ckpt}" ]] || continue
   name="$(basename "${ckpt}")"
   out="${ROOT}/outputs/qwen3_omni_${name}_dev_full.jsonl"
