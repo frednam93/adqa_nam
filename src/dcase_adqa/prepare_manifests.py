@@ -21,7 +21,7 @@ def normalize(split: str, row: dict, audio_root: Path) -> dict:
         question = row["question_text"]
         choices = row["multi_choice"]
 
-    return {
+    item = {
         "id": str(row["id"]),
         "split": split,
         "audio": str(audio_root / row["audio_path"]),
@@ -32,6 +32,9 @@ def normalize(split: str, row: dict, audio_root: Path) -> dict:
         "source_dataset": row.get("source_dataset"),
         "question_type": row.get("question_type"),
     }
+    if row.get("gemini_cot"):
+        item["gemini_cot"] = row["gemini_cot"]
+    return item
 
 
 def write_manifest(split: str, repo: str, hf_split: str, data_root: Path, out_dir: Path) -> None:

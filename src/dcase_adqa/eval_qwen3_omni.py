@@ -75,6 +75,8 @@ def build_conversation(item: dict) -> list[dict]:
 
 def choose_prediction(generation: str, choices: list[str]) -> tuple[int, str]:
     text = generation.strip()
+    if "</think>" in text:
+        text = text.rsplit("</think>", 1)[-1].strip()
     lowered = text.lower()
     for i, choice in enumerate(choices):
         if lowered == choice.lower():
