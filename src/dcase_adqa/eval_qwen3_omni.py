@@ -16,6 +16,10 @@ SYSTEM_PROMPT = (
     "You are an audio question answering assistant. "
     "Listen to the audio and answer with only the exact option text."
 )
+GENERIC_PROMPT = (
+    "Describe the audio in detail. If speech is present, transcribe or summarize the spoken content. "
+    "Mention sound events, speakers, music, timing, and acoustic properties when relevant."
+)
 
 
 def move_inputs(inputs, device: torch.device, dtype: torch.dtype):
@@ -60,16 +64,23 @@ def build_question(item: dict) -> str:
     )
 
 
-def build_conversation(item: dict) -> list[dict]:
+def build_user_content(item: dict, prompt_mode: str) -> list[dict]:
+    content = []
+    if prompt_mode != "text_only":
+        content.append({"type": "audio", "audio": item["audio"]})
+    if prompt_mode == "audio_only":
+        return content
+    if prompt_mode == "generic_audio":
+        content.append({"type": "text", "text": GENERIC_PROMPT})
+    else:
+        content.append({"type": "text", "text": build_question(item)})
+    return content
+
+
+def build_conversation(item: dict, prompt_mode: str) -> list[dict]:
     return [
         {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]},
-        {
-            "role": "user",
-            "content": [
-                {"type": "audio", "audio": item["audio"]},
-                {"type": "text", "text": build_question(item)},
-            ],
-        },
+        {"role": "user", "content": build_user_content(item, prompt_mode)},
     ]
 
 
@@ -99,6 +110,12 @@ def main() -> None:
     parser.add_argument("--adapter", type=Path, default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--max-new-tokens", type=int, default=24)
+    parser.add_argument(
+        "--prompt-mode",
+        choices=("qa", "text_only", "audio_only", "generic_audio"),
+        default="qa",
+        help="qa uses audio+question; text_only omits audio; audio_only omits text; generic_audio asks for free-form description.",
+    )
     args = parser.parse_args()
 
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
@@ -139,7 +156,7 @@ def main() -> None:
     total = 0
     with args.output.open("w", encoding="utf-8") as out:
         for item in tqdm(rows):
-            conversation = build_conversation(item)
+            conversation = build_conversation(item, args.prompt_mode)
             text = processor.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
             audios, images, videos = process_mm_info(conversation, use_audio_in_video=False)
             inputs = processor(
@@ -187,6 +204,10 @@ def main() -> None:
                         "prediction_index": pred_index,
                         "correct": is_correct,
                         "raw_generation": generation,
+                        "prompt_mode": args.prompt_mode,
+                        "audio": item.get("audio", ""),
+                        "source_audio": item.get("source_audio", item.get("audio", "")),
+                        "ablation": item.get("ablation", "none"),
                     },
                     ensure_ascii=False,
                 )
