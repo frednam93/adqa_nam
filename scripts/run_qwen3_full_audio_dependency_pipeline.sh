@@ -23,16 +23,42 @@ runs=(
   non_easy_empty_shuffle_unknown10
 )
 
+notify() {
+  local title=$1
+  local message=${2:-}
+  PYTHONPATH="${ROOT}/src:${PYTHONPATH:-}" python3 -m dcase_adqa.notify_telegram --title "${title}" --message "${message}" || true
+}
+
+summarize_eval_file() {
+  local path=$1
+  python3 - "$path" <<'PY_SUMMARY'
+import json
+import sys
+from pathlib import Path
+
+p = Path(sys.argv[1])
+rows = [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()]
+ok = sum(bool(r.get("correct")) for r in rows)
+bad = sum(r.get("prediction_index") == -1 for r in rows)
+print(f"{p.name}: {ok}/{len(rows)} acc={ok/max(len(rows), 1):.4f} parse_bad={bad}")
+PY_SUMMARY
+}
+
+notify "DCASE full audio-dependency pipeline start" "host=$(hostname) root=${ROOT}"
+
 echo "==== $(date '+%m%d %H:%M:%S') prepare train full min ablation manifests ===="
 cd "${ROOT}"
 python3 -m dcase_adqa.prepare_train_full_min_ablation
+notify "DCASE manifests prepared" "train_full normal/empty/random manifests ready"
 
 echo "==== $(date '+%m%d %H:%M:%S') train full normal/empty/random ablation ===="
 python3 -m dcase_adqa.eval_qwen3_omni_min_ablation_suite
+notify "DCASE train-full ablation done" "normal/empty/random train ablations finished"
 
 echo "==== $(date '+%m%d %H:%M:%S') build full audio-dependency SFT datasets ===="
 python3 -m dcase_adqa.build_full_audio_dependency_sft
 python3 -m dcase_adqa.register_full_audio_dependency_sft
+notify "DCASE SFT datasets registered" "full audio-dependency buckets and six SFT variants are ready"
 
 run_train() {
   local run=$1
@@ -71,6 +97,13 @@ for run in "${runs[@]}"; do
   for step in 1000 2000 3000; do
     run_eval_ckpt "${run}" "${step}"
   done
+  summary=$(
+    for step in 1000 2000 3000; do
+      p="${ROOT}/outputs/qwen3_audio_dep_full_${run}_3k_dev_ckpt${step}.jsonl"
+      [[ -s "${p}" ]] && summarize_eval_file "${p}"
+    done
+  )
+  notify "DCASE ${run} done" "${summary}"
   echo "==== $(date '+%m%d %H:%M:%S') ${run} done ===="
   sleep 3
 done
@@ -90,3 +123,30 @@ for run in runs:
         pb=sum(r.get('prediction_index') == -1 for r in rows)
         print(f'{run} ckpt{step}: {ok}/{len(rows)} acc={ok/max(len(rows),1):.4f} parse_bad={pb}')
 PY
+
+summary=$(python3 - <<'PY_FINAL_SUMMARY'
+import json
+from pathlib import Path
+root=Path('/home/user/ssdmain/dcase-adqa')
+runs=['strong_ac','strong_hard_ac','non_easy_ac','non_easy_empty_unknown5','non_easy_shuffle_unknown5','non_easy_empty_shuffle_unknown10']
+best=None
+lines=[]
+for run in runs:
+    for step in [1000,2000,3000]:
+        p=root/f'outputs/qwen3_audio_dep_full_{run}_3k_dev_ckpt{step}.jsonl'
+        if not p.exists():
+            continue
+        rows=[json.loads(x) for x in p.read_text(encoding='utf-8').splitlines() if x.strip()]
+        ok=sum(bool(r.get('correct')) for r in rows)
+        pb=sum(r.get('prediction_index') == -1 for r in rows)
+        acc=ok/max(len(rows),1)
+        line=f'{run} ckpt{step}: {ok}/{len(rows)} acc={acc:.4f} parse_bad={pb}'
+        lines.append(line)
+        if best is None or acc > best[0]:
+            best=(acc,line)
+if best:
+    print('best: '+best[1])
+print('\n'.join(lines[-12:]))
+PY_FINAL_SUMMARY
+)
+notify "DCASE full audio-dependency pipeline finished" "${summary}"
