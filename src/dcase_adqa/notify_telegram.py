@@ -8,13 +8,38 @@ from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 
+def load_env_file() -> None:
+    env_path = Path(os.environ.get("TELEGRAM_ENV_FILE", "~/.config/codex/telegram.env")).expanduser()
+    if not env_path.exists():
+        return
+    for raw in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key in os.environ:
+            continue
+        try:
+            parsed = shlex.split(value, posix=True)
+            os.environ[key] = parsed[0] if parsed else ""
+        except ValueError:
+            os.environ[key] = value.strip().strip("'\"")
+
+
 def send_message(text: str) -> bool:
+    load_env_file()
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
