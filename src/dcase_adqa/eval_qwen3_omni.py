@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 
 import torch
@@ -64,6 +65,35 @@ def build_question(item: dict) -> str:
     )
 
 
+def build_letter_question(item: dict) -> str:
+    labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    options = "\n".join(
+        f"({labels[i]}) {choice}" for i, choice in enumerate(item["choices"])
+    )
+    valid = "/".join(labels[: len(item["choices"])])
+    return (
+        f"{item['question']}\n"
+        "Choose the correct option from the following options:\n"
+        f"{options}\n"
+        f"Answer with only one letter: {valid}."
+    )
+
+
+def build_cot_letter_question(item: dict) -> str:
+    labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    options = "\n".join(
+        f"({labels[i]}) {choice}" for i, choice in enumerate(item["choices"])
+    )
+    valid = "/".join(labels[: len(item["choices"])])
+    return (
+        f"{item['question']}\n"
+        "Choose the correct option from the following options:\n"
+        f"{options}\n"
+        "Think briefly using the audio evidence, then give the final answer on the last line.\n"
+        f"The final line must be exactly: Answer: <one letter from {valid}>."
+    )
+
+
 def build_user_content(item: dict, prompt_mode: str) -> list[dict]:
     content = []
     if prompt_mode != "text_only":
@@ -72,6 +102,10 @@ def build_user_content(item: dict, prompt_mode: str) -> list[dict]:
         return content
     if prompt_mode == "generic_audio":
         content.append({"type": "text", "text": GENERIC_PROMPT})
+    elif prompt_mode == "letter_only":
+        content.append({"type": "text", "text": build_letter_question(item)})
+    elif prompt_mode == "cot_then_letter":
+        content.append({"type": "text", "text": build_cot_letter_question(item)})
     else:
         content.append({"type": "text", "text": build_question(item)})
     return content
@@ -102,6 +136,31 @@ def choose_prediction(generation: str, choices: list[str]) -> tuple[int, str]:
     return -1, text
 
 
+def choose_letter_prediction(generation: str, choices: list[str]) -> tuple[int, str]:
+    text = generation.strip()
+    if "</think>" in text:
+        text = text.rsplit("</think>", 1)[-1].strip()
+    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[: len(choices)]
+    letter_class = re.escape(letters)
+    answer_patterns = [
+        rf"(?i)(?:final\s+answer|answer)\s*[:：]\s*\(?\s*([{letter_class}])\s*\)?",
+        rf"(?im)^\s*\(?\s*([{letter_class}])\s*\)?\s*[.]?\s*$",
+    ]
+    for pattern in answer_patterns:
+        matches = re.findall(pattern, text)
+        if matches:
+            idx = letters.index(matches[-1].upper())
+            return idx, choices[idx]
+    # Last resort for letter-only prompts that produce a short phrase like "(C)".
+    short = text.strip()
+    if len(short) <= 12:
+        match = re.search(rf"(?i)\(?\s*([{letter_class}])\s*\)?", short)
+        if match:
+            idx = letters.index(match.group(1).upper())
+            return idx, choices[idx]
+    return choose_prediction(generation, choices)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=Path, required=True)
@@ -112,7 +171,7 @@ def main() -> None:
     parser.add_argument("--max-new-tokens", type=int, default=24)
     parser.add_argument(
         "--prompt-mode",
-        choices=("qa", "text_only", "audio_only", "generic_audio"),
+        choices=("qa", "text_only", "audio_only", "generic_audio", "letter_only", "cot_then_letter"),
         default="qa",
         help="qa uses audio+question; text_only omits audio; audio_only omits text; generic_audio asks for free-form description.",
     )
@@ -190,7 +249,10 @@ def main() -> None:
                 skip_special_tokens=True,
                 clean_up_tokenization_spaces=False,
             )[0]
-            pred_index, pred_text = choose_prediction(generation, item["choices"])
+            if args.prompt_mode in {"letter_only", "cot_then_letter"}:
+                pred_index, pred_text = choose_letter_prediction(generation, item["choices"])
+            else:
+                pred_index, pred_text = choose_prediction(generation, item["choices"])
             is_correct = pred_index == item["answer_index"]
             correct += int(is_correct)
             total += 1
