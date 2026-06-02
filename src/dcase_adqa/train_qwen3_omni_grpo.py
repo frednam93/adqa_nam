@@ -10,7 +10,7 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
-from peft import PeftModel
+from peft import LoraConfig, PeftModel, get_peft_model
 from qwen_omni_utils import process_mm_info
 from torch.optim import AdamW
 from tqdm import tqdm
@@ -142,7 +142,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--model", type=Path, default=Path("/home/user/ssdmain/models/dcase_adqa/qwen3_omni_30b_a3b_instruct"))
-    parser.add_argument("--adapter", type=Path, required=True)
+    parser.add_argument("--adapter", type=Path, default=None)
+    parser.add_argument("--lora-rank", type=int, default=4)
+    parser.add_argument("--lora-alpha", type=int, default=8)
+    parser.add_argument("--lora-dropout", type=float, default=0.05)
+    parser.add_argument("--lora-target", default="q_proj,v_proj")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--max-steps", type=int, default=100)
@@ -189,7 +193,18 @@ def main() -> None:
     if hasattr(model, "thinker"):
         model = model.thinker
         is_thinker_model = True
-    model = PeftModel.from_pretrained(model, args.adapter, is_trainable=True)
+    if args.adapter is not None:
+        model = PeftModel.from_pretrained(model, args.adapter, is_trainable=True)
+    else:
+        lora_config = LoraConfig(
+            r=args.lora_rank,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            target_modules=[x.strip() for x in args.lora_target.split(",") if x.strip()],
+            bias="none",
+            task_type="CAUSAL_LM",
+        )
+        model = get_peft_model(model, lora_config)
     model.train()
     model_device = next(model.parameters()).device
     model_dtype = next((p.dtype for p in model.parameters() if p.is_floating_point()), torch.bfloat16)
