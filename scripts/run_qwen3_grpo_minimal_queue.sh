@@ -117,7 +117,7 @@ from pathlib import Path
 root = Path("/home/user/ssdmain/dcase-adqa")
 lines = []
 for run in ["grpo100", "dapo_lite100"]:
-    p = root / f"outputs/qwen3_audio_dep_full_strong_empty5_{run}_dev_ckpt100.jsonl"
+    p = root / f"outputs/qwen3_audio_dep_full_hard_grpo_{run}_dev_ckpt100.jsonl"
     rows = [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()]
     ok = sum(bool(r.get("correct")) for r in rows)
     bad = sum(r.get("prediction_index") == -1 for r in rows)
