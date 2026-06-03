@@ -17,13 +17,43 @@ from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForTextToWaveform, AutoProcessor, BitsAndBytesConfig
 
 from dcase_adqa.eval_qwen3_omni import (
-    SYSTEM_PROMPT,
     build_conversation,
+    build_question,
     choose_prediction,
     decode_generated_tokens,
     move_inputs,
 )
 
+
+UNKNOWN_TARGET = "Cannot be determined from the audio."
+UNKNOWN_SYSTEM = (
+    "You are an audio question answering assistant. Listen to the audio and answer with only the exact option text. "
+    "If the provided audio is missing or does not contain the information needed to answer the question, answer exactly: "
+    f"{UNKNOWN_TARGET}"
+)
+
+
+def normalize_text(text: str) -> str:
+    if "</think>" in text:
+        text = text.rsplit("</think>", 1)[-1]
+    return " ".join(text.strip().lower().rstrip(".。!！").split())
+
+
+def build_empty_unknown_question(item: dict) -> str:
+    return (
+        f"{build_question(item)}\n"
+        "The audio is intentionally missing. "
+        f"Answer exactly: {UNKNOWN_TARGET}"
+    )
+
+
+def build_training_conversation(item: dict, task: str) -> list[dict]:
+    if task == "empty_unknown":
+        return [
+            {"role": "system", "content": [{"type": "text", "text": UNKNOWN_SYSTEM}]},
+            {"role": "user", "content": [{"type": "text", "text": build_empty_unknown_question(item)}]},
+        ]
+    return build_conversation(item, "qa")
 
 def load_jsonl(path: Path, limit: int | None = None) -> list[dict]:
     rows = []
@@ -37,8 +67,8 @@ def load_jsonl(path: Path, limit: int | None = None) -> list[dict]:
     return rows
 
 
-def build_assistant_conversation(item: dict, response: str) -> list[dict]:
-    convo = build_conversation(item, "qa")
+def build_assistant_conversation(item: dict, response: str, task: str) -> list[dict]:
+    convo = build_training_conversation(item, task)
     convo.append({"role": "assistant", "content": [{"type": "text", "text": response}]})
     return convo
 
@@ -62,17 +92,17 @@ def render_inputs(processor, conversation: list[dict], model_device, model_dtype
     return move_inputs(inputs, model_device, model_dtype)
 
 
-def response_logprob(model, processor, item: dict, response: str, model_device, model_dtype) -> torch.Tensor:
+def response_logprob(model, processor, item: dict, response: str, task: str, model_device, model_dtype) -> torch.Tensor:
     prompt_inputs = render_inputs(
         processor,
-        build_conversation(item, "qa"),
+        build_training_conversation(item, task),
         model_device,
         model_dtype,
         add_generation_prompt=True,
     )
     full_inputs = render_inputs(
         processor,
-        build_assistant_conversation(item, response),
+        build_assistant_conversation(item, response, task),
         model_device,
         model_dtype,
         add_generation_prompt=False,
@@ -94,7 +124,12 @@ def response_logprob(model, processor, item: dict, response: str, model_device, 
     return (token_logps * valid).sum() / valid.sum().clamp_min(1)
 
 
-def reward_generation(generation: str, item: dict, parse_bad_penalty: float) -> tuple[float, int, str]:
+def reward_generation(generation: str, item: dict, task: str, parse_bad_penalty: float) -> tuple[float, int, str]:
+    if task == "empty_unknown":
+        normalized = normalize_text(generation)
+        target = normalize_text(UNKNOWN_TARGET)
+        matched = normalized == target or target in normalized
+        return (1.0 if matched else 0.0), (-3 if matched else -1), generation.strip()
     pred_index, pred_text = choose_prediction(generation, item["choices"])
     if pred_index < 0:
         return parse_bad_penalty, pred_index, pred_text
@@ -110,10 +145,11 @@ def generate_one(
     max_new_tokens: int,
     temperature: float,
     is_thinker_model: bool,
+    task: str,
 ):
     inputs = render_inputs(
         processor,
-        build_conversation(item, "qa"),
+        build_training_conversation(item, task),
         model_device,
         model_dtype,
         add_generation_prompt=True,
@@ -155,6 +191,7 @@ def main() -> None:
     parser.add_argument("--temperature", type=float, default=0.8)
     parser.add_argument("--max-new-tokens", type=int, default=24)
     parser.add_argument("--parse-bad-penalty", type=float, default=-0.2)
+    parser.add_argument("--empty-unknown-prob", type=float, default=0.0)
     parser.add_argument("--dapo-lite", action="store_true")
     parser.add_argument("--seed", type=int, default=20260602)
     parser.add_argument("--save-steps", type=int, default=50)
@@ -222,6 +259,7 @@ def main() -> None:
             for item in train_rows:
                 if global_step >= args.max_steps:
                     break
+                task = "empty_unknown" if random.random() < args.empty_unknown_prob else "qa"
                 generations = [
                     generate_one(
                         model,
@@ -232,10 +270,11 @@ def main() -> None:
                         args.max_new_tokens,
                         args.temperature,
                         is_thinker_model,
+                        task,
                     )
                     for _ in range(args.num_generations)
                 ]
-                rewards = [reward_generation(gen, item, args.parse_bad_penalty)[0] for gen in generations]
+                rewards = [reward_generation(gen, item, task, args.parse_bad_penalty)[0] for gen in generations]
                 mean_reward = sum(rewards) / len(rewards)
                 variance = sum((r - mean_reward) ** 2 for r in rewards) / len(rewards)
                 std_reward = math.sqrt(variance)
@@ -244,10 +283,11 @@ def main() -> None:
                     global_step += 1
                     pbar.update(1)
                     if global_step % args.log_steps == 0:
-                        parsed = [reward_generation(gen, item, args.parse_bad_penalty) for gen in generations]
+                        parsed = [reward_generation(gen, item, task, args.parse_bad_penalty) for gen in generations]
                         rec = {
                             "step": global_step,
                             "id": item.get("id"),
+                            "task": task,
                             "loss": 0.0,
                             "reward_mean": mean_reward,
                             "reward_std": std_reward,
@@ -275,7 +315,7 @@ def main() -> None:
                 loss_values = []
                 logps = []
                 for gen, adv in zip(generations, advantages, strict=True):
-                    lp = response_logprob(model, processor, item, gen, model_device, model_dtype)
+                    lp = response_logprob(model, processor, item, gen, task, model_device, model_dtype)
                     logps.append(float(lp.detach().cpu()))
                     loss_term = -float(adv) * lp / len(generations)
                     loss_values.append(float(loss_term.detach().cpu()))
@@ -290,10 +330,11 @@ def main() -> None:
                 global_step += 1
                 pbar.update(1)
                 if global_step % args.log_steps == 0:
-                    parsed = [reward_generation(gen, item, args.parse_bad_penalty) for gen in generations]
+                    parsed = [reward_generation(gen, item, task, args.parse_bad_penalty) for gen in generations]
                     rec = {
                         "step": global_step,
                         "id": item.get("id"),
+                        "task": task,
                         "loss": loss_value,
                         "reward_mean": mean_reward,
                         "reward_std": std_reward,
