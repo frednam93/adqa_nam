@@ -7,7 +7,7 @@ ROOT = Path("/home/user/ssdmain/dcase-adqa")
 FAC = ROOT / "external/Fun-Audio-Chat"
 DATA_INFO = FAC / "training/data/dataset_info.json"
 SFT_DIR = Path("/home/user/ssdmain/datasets/dcase2026_task5/qwen3_omni_sft_additive_catbal")
-RUNS = ["strong_empty5_catbal10", "strong_empty5_catbal20", "strong_empty5_catbal30"]
+RUNS = ["strong_empty5_catbalmix10", "strong_empty5_catbalmix20", "strong_empty5_catbalmix30"]
 
 
 def main() -> None:

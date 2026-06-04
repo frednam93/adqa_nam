@@ -11,7 +11,7 @@ export DISABLE_VERSION_CHECK=1
 export FORCE_TORCHRUN=1
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-runs=(strong_empty5_catbal10 strong_empty5_catbal20 strong_empty5_catbal30)
+runs=(strong_empty5_catbalmix10 strong_empty5_catbalmix20 strong_empty5_catbalmix30)
 
 notify() {
   local title=$1
@@ -69,7 +69,7 @@ cd "${ROOT}"
 echo "==== $(date '+%m%d %H:%M:%S') prepare/register additive catbal manifests ===="
 python3 -m dcase_adqa.prepare_additive_catbal_sft
 python3 -m dcase_adqa.register_additive_catbal_sft
-notify "DCASE additive catbal SFT queue start" "catbal10/20/30 manifests prepared"
+notify "DCASE additive catbalmix SFT queue start" "catbalmix10/20/30 manifests prepared"
 
 for run in "${runs[@]}"; do
   run_train "${run}"
@@ -91,7 +91,7 @@ summary=$(python3 - <<'PY_FINAL_SUMMARY'
 import json
 from pathlib import Path
 root = Path('/home/user/ssdmain/dcase-adqa')
-runs = ['strong_empty5_catbal10', 'strong_empty5_catbal20', 'strong_empty5_catbal30']
+runs = ['strong_empty5_catbalmix10', 'strong_empty5_catbalmix20', 'strong_empty5_catbalmix30']
 best = None
 lines = []
 for run in runs:
@@ -113,4 +113,4 @@ print('\n'.join(lines))
 PY_FINAL_SUMMARY
 )
 echo "${summary}"
-notify "DCASE additive catbal SFT queue finished" "${summary}"
+notify "DCASE additive catbalmix SFT queue finished" "${summary}"
