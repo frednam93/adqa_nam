@@ -25,26 +25,19 @@ PY
 }
 
 echo "==== $(date '+%m%d %H:%M:%S') wait rebalanced queue idle ===="
-notify "DCASE AF3/Gemma watcher start" "waiting for rebalanced SFT queue to finish"
+notify "DCASE AF3 watcher start" "waiting for rebalanced SFT queue to finish"
 
 while pgrep -af 'run_qwen3_rebalanced_sft_queue|dcase_adqa_qwen3_rebalanced|eval_qwen3_omni' | grep -v 'wait_rebalanced_then_eval_af3_gemma4' >/dev/null; do
   sleep 300
 done
 
 cd "${ROOT}"
-notify "DCASE AF3/Gemma eval start" "rebalanced queue appears idle"
+notify "DCASE AF3 eval start" "rebalanced queue appears idle"
 
 echo "==== $(date '+%m%d %H:%M:%S') AF3 eval start ===="
 bash scripts/eval_audioflamingo3_dev.sh --output "${ROOT}/outputs/audioflamingo3_dev_full_rerun.jsonl"
 af3_summary=$(summarize_eval_file "${ROOT}/outputs/audioflamingo3_dev_full_rerun.jsonl")
 notify "DCASE AF3 eval done" "${af3_summary}"
 
-echo "==== $(date '+%m%d %H:%M:%S') Gemma4 E4B eval start ===="
-bash scripts/eval_gemma4_e4b_dev.sh
-gemma_summary=$(summarize_eval_file "${ROOT}/outputs/gemma4_e4b_dev_full.jsonl")
-notify "DCASE Gemma4 E4B eval done" "${gemma_summary}"
-
 echo "${af3_summary}"
-echo "${gemma_summary}"
-notify "DCASE AF3/Gemma eval finished" "${af3_summary}
-${gemma_summary}"
+notify "DCASE AF3 eval finished" "${af3_summary}"
