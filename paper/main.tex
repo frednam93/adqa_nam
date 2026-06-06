@@ -118,7 +118,7 @@ This was intended to make the model reject mismatched audio-question pairs, but 
 We sweep the negative-example ratio and the checkpoint step, using the development set for model selection.
 Table~\ref{tab:data_variants} summarizes the main fine-tuning datasets.
 
-\begin{table}[t]
+\begin{table*}[t]
 \centering
 \small
 \caption{Fine-tuning dataset variants. Counts are training examples after adding negative examples when applicable.}
@@ -140,7 +140,7 @@ Strong+empty+shuffle 10\% & 5,212 & Both negative types \\
 Category-balanced v3 & 10,594 & Approx. balanced categories, 5\% empty \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \section{Development Results}
 Table~\ref{tab:main_results} summarizes the main train-only systems.
