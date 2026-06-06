@@ -68,6 +68,9 @@ else
   echo "skip existing train ${B_ADAPTER}"
 fi
 
+echo "==== $(date '+%m%d %H:%M:%S') B train finished; hand off to unified final watcher ===="
+exit 0
+
 run_eval A_train_only_empty5_2k "${A_ADAPTER}"
 run_eval B_train_dev_empty5_2k "${B_ADAPTER}"
 run_eval C_train_dev_empty5_1k "${C_ADAPTER}"
