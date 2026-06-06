@@ -28,7 +28,7 @@ This motivated an audio-dependency-aware training recipe inspired by audio contr
 
 \section{System Overview}
 All systems use Qwen3-Omni-30B-A3B-Instruct~\cite{qwen3omni2025,qwen3omnihf}.
-We fine-tune using LoRA~\cite{hu2021lora} with rank 4, alpha 8, dropout 0.05, and trainable query and value projections only.
+We fine-tune with LLaMA-Factory~\cite{zheng2024llamafactory} using LoRA~\cite{hu2021lora} with rank 4, alpha 8, dropout 0.05, and trainable query and value projections only.
 The audio tower and multimodal projector are frozen.
 Inference uses greedy decoding with a prompt that asks the model to output only the exact option text.
 
@@ -140,19 +140,19 @@ Table~\ref{tab:failed} lists the main negative results.
 \toprule
 Experiment & Strict & Judge \\
 \midrule
-FunAudioChat base & 54.26 & -- \\
-AudioFlamingo3 rerun & 54.32 & -- \\
+FunAudioChat~\cite{funaudiochat2025,funaudiollm2024} base & 54.26 & -- \\
+AudioFlamingo3~\cite{goel2025audioflamingo3} rerun & 54.32 & -- \\
 Answer-only Qwen SFT, 9k & 62.85 & -- \\
 Silent CoT SFT, 3k & 61.05 & -- \\
 Explicit CoT SFT, 3k & 58.49 & -- \\
 Category-balanced v3 & 64.09 & -- \\
 Catbalmix10, ckpt2000 & 65.21 & -- \\
-SIMPO continuation, 500 & 65.65 & 66.96 \\
-DPO continuation, 500 & 65.15 & 66.46 \\
-SFT-init GRPO, 100 & 65.09 & 66.21 \\
-SFT-init DAPO-lite, 100 & 65.21 & 66.40 \\
-Empty-aware GRPO, 100 & 65.09 & 66.46 \\
-Empty-aware DAPO-lite, 100 & 64.72 & 65.90 \\
+SimPO~\cite{meng2024simpo} continuation, 500 & 65.65 & 66.96 \\
+DPO~\cite{rafailov2023dpo} continuation, 500 & 65.15 & 66.46 \\
+SFT-init GRPO~\cite{shao2024deepseekmath}, 100 & 65.09 & 66.21 \\
+SFT-init DAPO-lite~\cite{yu2025dapo}, 100 & 65.21 & 66.40 \\
+Empty-aware GRPO~\cite{shao2024deepseekmath}, 100 & 65.09 & 66.46 \\
+Empty-aware DAPO-lite~\cite{yu2025dapo}, 100 & 64.72 & 65.90 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -161,6 +161,7 @@ The early answer-only Qwen3 fine-tuning runs degraded the base model, even thoug
 Category-level model routing provided only a small oracle gain: choosing the best model per rule-based category would reach 66.83\%, compared with 65.90\% for Qwen3-Omni base.
 The much higher per-sample oracle of 90.85\% indicates complementary errors, but coarse category routing alone is insufficient.
 Preference/RL continuation also failed to exceed the 5\% empty-audio SFT checkpoint.
+The tested preference objectives were DPO~\cite{rafailov2023dpo}, SimPO~\cite{meng2024simpo}, ORPO~\cite{hong2024orpo}, and KTO~\cite{ethayarajh2024kto}; the RL-style objectives were GRPO~\cite{shao2024deepseekmath} and a small DAPO-style variant~\cite{yu2025dapo}.
 ORPO collapsed into invalid outputs in our run, and KTO was not used because the audio metadata path was dropped by the training pipeline.
 
 \section{Error Analysis}
