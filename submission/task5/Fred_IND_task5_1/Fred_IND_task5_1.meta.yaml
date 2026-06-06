@@ -1,0 +1,35 @@
+# Submission information for DCASE 2026 Task 5
+submission:
+  label: Fred_IND_task5_1
+  name: Qwen3-Omni Strong Empty5
+  abbreviation: Q3-E5
+
+authors:
+  - lastname: Nam
+    firstname: Fred
+    email: TODO@example.com
+    corresponding: true
+    affiliation:
+      abbreviation: IND
+      institute: Independent researcher
+      department: TODO
+      location: Seoul, Republic of Korea
+
+system:
+  end_to_end: false
+  pretrained: true
+  pre_loaded: Qwen3-Omni-30B-A3B-Instruct
+  autoregressive_model: true
+  model_size: 60B
+  light_weighted: false
+  post_processing: Exact option-text matching followed by base Qwen3-Omni text-only response normalization for parse-failed outputs.
+  external_data_resources:
+    - AudioMCQ-StrongAC-GeminiCoT
+
+results:
+  development:
+    accuracy: 67.270%
+
+notes:
+  training: LoRA SFT on train strong-audio-dependent subset with 5% empty-audio unknown negatives, checkpoint 2000.
+  parameter_count_policy: 30B fine-tuned Qwen3-Omni inference model plus 30B base Qwen3-Omni response normalizer.

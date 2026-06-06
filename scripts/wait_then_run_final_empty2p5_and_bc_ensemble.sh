@@ -54,7 +54,7 @@ cd "${ROOT}"
 python3 -m dcase_adqa.make_submission_outputs single \
   --manifest "${EVAL_MANIFEST}" \
   --pred "${C_PRED}" \
-  --output-csv "${OUT}/csv/Fred_SNU_task5_C_train_dev_empty2p5_3k.output.csv" \
+  --output-csv "${OUT}/csv/Fred_IND_task5_C_train_dev_empty2p5_3k.output.csv" \
   --output-jsonl "${OUT}/csv/C_train_dev_empty2p5_3k.parsed.jsonl"
 
 if [[ -s "${B_PRED}" ]]; then
@@ -63,7 +63,7 @@ if [[ -s "${B_PRED}" ]]; then
     --name B --pred "${B_PRED}" \
     --name C --pred "${C_PRED}" \
     --tie-breaker B \
-    --output-csv "${OUT}/csv/Fred_SNU_task5_ensemble_BC_Btie.output.csv" \
+    --output-csv "${OUT}/csv/Fred_IND_task5_ensemble_BC_Btie.output.csv" \
     --output-jsonl "${OUT}/csv/ensemble_BC_Btie.parsed.jsonl"
 fi
 
@@ -78,7 +78,7 @@ if [[ -s "${B_PRED}" && -s "${C_PRED}" ]]; then
     python3 -m dcase_adqa.make_submission_outputs single \
       --manifest "${EVAL_MANIFEST}" \
       --pred "${OUT}/preds_basejudge/${name}.eval.basejudge.jsonl" \
-      --output-csv "${OUT}/csv_basejudge/Fred_SNU_task5_${name}_basejudge.output.csv" \
+      --output-csv "${OUT}/csv_basejudge/Fred_IND_task5_${name}_basejudge.output.csv" \
       --output-jsonl "${OUT}/csv_basejudge/${name}.basejudge.parsed.jsonl"
   done
   python3 -m dcase_adqa.make_submission_outputs ensemble \
@@ -86,7 +86,7 @@ if [[ -s "${B_PRED}" && -s "${C_PRED}" ]]; then
     --name B --pred "${OUT}/preds_basejudge/B_train_dev_empty5_2k.eval.basejudge.jsonl" \
     --name C --pred "${OUT}/preds_basejudge/C_train_dev_empty2p5_3k.eval.basejudge.jsonl" \
     --tie-breaker B \
-    --output-csv "${OUT}/csv_basejudge/Fred_SNU_task5_ensemble_BC_Btie_basejudge.output.csv" \
+    --output-csv "${OUT}/csv_basejudge/Fred_IND_task5_ensemble_BC_Btie_basejudge.output.csv" \
     --output-jsonl "${OUT}/csv_basejudge/ensemble_BC_Btie_basejudge.parsed.jsonl"
 fi
 

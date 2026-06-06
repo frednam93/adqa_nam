@@ -51,7 +51,7 @@ make_single_csv() {
   python3 -m dcase_adqa.make_submission_outputs single \
     --manifest "${EVAL_MANIFEST}" \
     --pred "${OUT}/preds/${name}.eval.jsonl" \
-    --output-csv "${OUT}/csv/Fred_SNU_task5_${name}.output.csv" \
+    --output-csv "${OUT}/csv/Fred_IND_task5_${name}.output.csv" \
     --output-jsonl "${OUT}/csv/${name}.parsed.jsonl"
 }
 
@@ -83,7 +83,7 @@ python3 -m dcase_adqa.make_submission_outputs ensemble \
   --name B --pred "${OUT}/preds/B_train_dev_empty5_2k.eval.jsonl" \
   --name C --pred "${OUT}/preds/C_train_dev_empty5_1k.eval.jsonl" \
   --tie-breaker B \
-  --output-csv "${OUT}/csv/Fred_SNU_task5_ensemble_ABC_Btie.output.csv" \
+  --output-csv "${OUT}/csv/Fred_IND_task5_ensemble_ABC_Btie.output.csv" \
   --output-jsonl "${OUT}/csv/ensemble_ABC_Btie.parsed.jsonl"
 
 summary=$(python3 - <<'PY_SUM'

@@ -1,0 +1,39 @@
+# Submission information for DCASE 2026 Task 5
+submission:
+  label: Fred_IND_task5_4
+  name: Qwen3-Omni TrainDev Ensemble
+  abbreviation: Q3-Ens
+
+authors:
+  - lastname: Nam
+    firstname: Fred
+    email: TODO@example.com
+    corresponding: true
+    affiliation:
+      abbreviation: IND
+      institute: Independent researcher
+      department: TODO
+      location: Seoul, Republic of Korea
+
+system:
+  end_to_end: false
+  pretrained: true
+  pre_loaded: Qwen3-Omni-30B-A3B-Instruct
+  autoregressive_model: true
+  model_size: 90B
+  light_weighted: false
+  post_processing: Base Qwen3-Omni text-only response normalization followed by two-model voting; ties are broken by the train+dev empty-5% system.
+  external_data_resources:
+    - AudioMCQ-StrongAC-GeminiCoT
+    - DCASE2026-Task5-DevSet
+
+results:
+  development:
+    accuracy: null
+
+notes:
+  ensemble_members:
+    - Fred_IND_task5_2
+    - Fred_IND_task5_3
+  parameter_count_policy: 30B train+dev empty-5% model plus 30B train+dev empty-2.5% model plus 30B base Qwen3-Omni response normalizer.
+  validation_note: Development labels are used for final training, so no held-out development score is reported for this final system.

@@ -1,0 +1,83 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{amsmath}
+
+\title{Audio-Dependency-Aware Post-Training of Qwen3-Omni for DCASE 2026 Task 5}
+\author{TODO: Fred Nam \and Independent researcher}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This technical report describes our system for DCASE 2026 Task 5, Audio-Dependent Question Answering.
+We build on the open-source Qwen3-Omni 30B-A3B model and focus on reducing shortcut reliance on the textual question prior.
+Our best development systems use LoRA supervised fine-tuning on audio-dependent training items, small proportions of empty-audio negative examples, and a text-only response normalizer for parse-failed model generations.
+On the development set, the strongest train-only system reaches 67.27\% accuracy after response normalization, compared with 65.90\% for the local Qwen3-Omni baseline.
+\end{abstract}
+
+\section{Task and Constraints}
+DCASE 2026 Task 5 evaluates top-1 accuracy on ADQA-Bench, a multiple-choice audio-dependent question answering benchmark.
+The final inference system must use open-source large audio-language models, with no single model component above 30B parameters and no more than 100B total parameters for agent or ensemble systems.
+Each output file contains one plain answer text per evaluation question.
+
+\section{Base Model and Prompting}
+All submitted systems are based on Qwen3-Omni-30B-A3B-Instruct.
+We use 4-bit quantization for local inference and LoRA fine-tuning with rank 4, alpha 8, dropout 0.05, targeting the query and value projections.
+The audio tower and multimodal projector are frozen.
+During answer generation, the model receives the audio and the question with four choices and is instructed to output only the exact option text.
+
+\section{Audio-Dependency Filtering}
+We first evaluate the base model under diagnostic ablations on the training split: normal audio-question pairs, empty-audio questions, and shuffled-audio questions.
+Training items are bucketed by whether the base model requires the correct audio to answer correctly.
+The main SFT subset uses the \emph{strong audio-dependent} bucket, excluding easy text-prior cases where the answer can be inferred without audio.
+
+\section{Negative Unknown Examples}
+To make the model less willing to answer from question priors alone, we add a small number of empty-audio negative examples.
+For these examples, the audio is removed and the target answer is a fixed unknown response, ``Cannot be determined from the audio.''
+We sweep the ratio of such negatives and find that 5\% and 2.5\% are the strongest settings on the development set.
+
+\section{Response Normalization and Ensembling}
+Raw generations are first parsed by exact option-text matching and letter-prefix stripping.
+For parse failures, we optionally use a base Qwen3-Omni text-only normalizer that maps the raw generation to one of the provided choices.
+This normalizer is counted as an additional 30B model component in the submitted system metadata.
+Our ensemble submission combines two fine-tuned systems by majority vote; in a 1:1 tie, the development-best train+dev empty-5\% system is used as the tie breaker.
+
+\section{Experiments}
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+System & Step & Strict Acc. & Parse Bad & Judge Acc. \\
+\midrule
+Qwen3-Omni local baseline & -- & 65.90 & 1 & -- \\
+Strong SFT + empty 5\% & 1000 & 64.78 & 26 & 66.09 \\
+Strong SFT + empty 5\% & 2000 & 66.02 & 27 & 67.27 \\
+Strong SFT + empty 5\% & 3000 & 65.28 & 28 & 66.52 \\
+Strong SFT + empty 2.5\% & 3000 & 65.77 & 28 & 67.02 \\
+Strong SFT + empty+shuffle 10\% & 1000 & 64.97 & 26 & 66.27 \\
+\bottomrule
+\end{tabular}
+\caption{Development-set results. Judge accuracy uses the Qwen3-Omni text-only response normalizer only for parse-failed samples.}
+\end{table}
+
+\section{Submitted Systems}
+We prepare four candidate submissions:
+\begin{enumerate}
+  \item Train-only strong SFT with 5\% empty negatives at 2000 steps, plus base Qwen3 response normalization.
+  \item Train+dev strong SFT with 5\% empty negatives at 2000 steps, plus base Qwen3 response normalization.
+  \item Train+dev strong SFT with 2.5\% empty negatives at 3000 steps, plus base Qwen3 response normalization.
+  \item An ensemble of systems 2 and 3 with system 2 as tie breaker, plus base Qwen3 response normalization.
+\end{enumerate}
+
+\section{Limitations}
+Most improvements are modest on the development set, suggesting that the model still relies partly on prior knowledge and incomplete audio perception.
+RL-style follow-up experiments and category-balanced resampling did not outperform the simple strong-audio SFT recipe in our current runs.
+The train+dev systems cannot be validated on held-out development labels and are intended only as final evaluation submissions.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}
