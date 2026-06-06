@@ -75,6 +75,7 @@ def main() -> None:
     p.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     p.add_argument("--seed", type=int, default=20260606)
     p.add_argument("--empty-ratio", type=float, default=0.05)
+    p.add_argument("--run-suffix", default=None)
     p.add_argument("--steps", type=int, default=2000)
     args = p.parse_args()
 
@@ -98,13 +99,15 @@ def main() -> None:
     data = positive_items + empty_items
     rng.shuffle(data)
 
-    dataset_name = "dcase_adqa_qwen3_final_train_dev_strong_empty5"
-    train_path = args.out_dir / "train_dev_strong_empty5" / "train.jsonl"
+    suffix = args.run_suffix or f"empty{str(args.empty_ratio * 100).replace('.', 'p').rstrip('0').rstrip('p')}"
+    dataset_name = f"dcase_adqa_qwen3_final_train_dev_strong_{suffix}"
+    run_name = f"train_dev_strong_{suffix}"
+    train_path = args.out_dir / run_name / "train.jsonl"
     write_jsonl(train_path, data)
     register_dataset(dataset_name, train_path)
     config_path = write_config(
         dataset_name=dataset_name,
-        output_dir=ROOT / "outputs/final_submission/qwen3_train_dev_strong_empty5_2k",
+        output_dir=ROOT / f"outputs/final_submission/qwen3_{run_name}_{args.steps // 1000}k",
         steps=args.steps,
         save_steps=1000,
     )
@@ -113,7 +116,7 @@ def main() -> None:
         "dataset_name": dataset_name,
         "train_path": str(train_path),
         "config_path": str(config_path),
-        "output_dir": str(ROOT / "outputs/final_submission/qwen3_train_dev_strong_empty5_2k"),
+        "output_dir": str(ROOT / f"outputs/final_submission/qwen3_{run_name}_{args.steps // 1000}k"),
         "train_strong": len(train_ids),
         "dev_strong": len(dev_ids),
         "positives": len(positive_items),
@@ -123,7 +126,7 @@ def main() -> None:
         "seed": args.seed,
         "steps": args.steps,
     }
-    summary_path = args.out_dir / "train_dev_strong_empty5" / "summary.json"
+    summary_path = args.out_dir / run_name / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
