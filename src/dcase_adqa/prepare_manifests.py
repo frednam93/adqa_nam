@@ -10,6 +10,7 @@ from datasets import load_dataset
 DATASETS = {
     "train": ("Harland/AudioMCQ-StrongAC-GeminiCoT", "train"),
     "dev": ("Harland/DCASE2026-Task5-DevSet", "dev"),
+    "eval": ("Harland/ADQA-Bench", "eval"),
 }
 
 
@@ -21,14 +22,16 @@ def normalize(split: str, row: dict, audio_root: Path) -> dict:
         question = row["question_text"]
         choices = row["multi_choice"]
 
+    choices = list(choices)
+    answer = row.get("answer")
     item = {
         "id": str(row["id"]),
         "split": split,
         "audio": str(audio_root / row["audio_path"]),
         "question": question,
-        "choices": list(choices),
-        "answer": row["answer"],
-        "answer_index": list(choices).index(row["answer"]) if row["answer"] in choices else -1,
+        "choices": choices,
+        "answer": answer,
+        "answer_index": choices.index(answer) if answer in choices else -1,
         "source_dataset": row.get("source_dataset"),
         "question_type": row.get("question_type"),
     }
