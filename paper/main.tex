@@ -3,7 +3,7 @@
 \usepackage{booktabs}
 \usepackage{url}
 
-\title{Audio-Dependency-Aware Post-Training of Qwen3-Omni for DCASE 2026 Task 5}
+\title{Strong-Audio Filtering and Empty-Audio Negative Training for Qwen3-Omni in DCASE 2026 Task 5}
 \name{Hyeonuk Nam}
 \address{Independent researcher\\
 Seoul, South Korea\\
@@ -14,7 +14,7 @@ frednam@kaist.ac.kr}
 
 \begin{abstract}
 This technical report describes our system for DCASE 2026 Task 5, Audio-Dependent Question Answering.
-We build on Qwen3-Omni-30B-A3B-Instruct~\cite{qwen3omni2025,qwen3omnihf}, an open-source large audio-language model, and focus on reducing shortcut reliance on the textual question prior.
+We build on Qwen3-Omni-30B-A3B-Instruct, an open-source large audio-language model, and focus on reducing shortcut reliance on the textual question prior.
 Our strongest train-only system uses LoRA supervised fine-tuning on audio-dependent training items, a small number of empty-audio negative examples, and a text-only response normalizer for parse-failed model generations.
 On the official development set, the best train-only system reaches 67.27\% accuracy after response normalization, compared with 65.90\% for our local Qwen3-Omni baseline.
 Final submissions additionally include train+development variants and a two-model ensemble.
@@ -37,6 +37,19 @@ First, deterministic parsing checks exact option-text matches and simple letter 
 Second, parse-failed responses are passed to the base Qwen3-Omni model as a text-only multiple-choice response normalizer.
 This normalizer sees only the candidate choices and the raw generation; it does not receive the audio or the ground-truth label.
 We count this normalizer as an additional 30B model component in the metadata.
+
+\section{Prompting and Input Variants}
+The default training and inference prompt presents the audio, the question, and four option texts.
+The user instruction is to choose the correct option and answer with only the exact option text, rather than a letter.
+This exact-option format was chosen because it gave substantially fewer unrecoverable outputs than letter-only or explicit reasoning prompts in our experiments.
+We also tested a letter-only prompt, where the model must output only A/B/C/D, and a brief chain-of-thought prompt, where the final line must contain a single letter.
+Both alternatives underperformed the exact-option prompt on the development set, suggesting that the base model is better aligned to natural option text than to constrained letter-only generation.
+
+For diagnostic analysis, we constructed several counterfactual input variants.
+In the empty-audio condition, the question and choices remain unchanged but no audio is provided.
+In the shuffled-audio condition, the question is paired with audio from a different sample; we used both random shuffling and category-aware shuffling during analysis.
+In a choice-shuffled condition, option order is changed to test whether the model is sensitive to answer position or option wording.
+These variants are used only for analysis and data selection, not as direct labels for the final evaluation set.
 
 \section{Diagnostic Audio-Dependency Analysis}
 \label{sec:diagnostics}
@@ -69,9 +82,16 @@ This analysis also revealed that many development samples are highly prior-drive
 
 \section{Fine-Tuning Data Construction}
 The main supervised fine-tuning set contains only strong audio-dependent training items.
+A sample is treated as strong audio-dependent when Qwen3-Omni answers the normal audio-question pair correctly but fails when the audio is removed and when the audio is shuffled.
+This criterion intentionally removes many easy samples that are solvable from text priors alone.
 We also tested broader subsets that include hard audio-dependent candidates and shuffle-leak items, but these did not improve development accuracy.
+
 To discourage unsupported guessing, we add empty-audio negative examples.
 For these examples, the audio input is removed and the target response is ``Cannot be determined from the audio.''
+The system message is also modified to explicitly allow this unknown response when the audio is missing or insufficient.
+We tested several negative-example ratios, from 2.5\% to 20\% of the positive strong-audio set.
+We additionally tested shuffled-audio unknown examples, where the question is paired with unrelated audio and the target is again the unknown response.
+This was intended to make the model reject mismatched audio-question pairs, but in our runs the combined empty+shuffle setting did not outperform the simpler empty-only recipe.
 We sweep the negative-example ratio and the checkpoint step, using the development set for model selection.
 
 \section{Development Results}
@@ -104,6 +124,8 @@ The best train-only setting is the 5\% empty-audio recipe at 2000 steps.
 The 2.5\% recipe at 3000 steps is the second strongest setting after response normalization.
 Higher empty ratios and combined empty+shuffle negatives did not outperform the best two settings.
 Letter-only and explicit chain-of-thought inference prompts were also worse than exact-option generation: for the best checkpoint, letter-only reached 60.17\% after normalization and CoT-then-letter reached 65.34\%, both below the default prompt.
+The exact-option prompt sometimes produces long non-option text, especially for speech-content questions.
+However, these failures are relatively rare, and the text-only normalizer recovers most of them without changing already parsed predictions.
 
 \section{Additional Ablations and Failed Directions}
 \label{sec:failed}
@@ -144,17 +166,23 @@ ORPO collapsed into invalid outputs in our run, and KTO was not used because the
 \section{Error Analysis}
 Comparing the best train-only system with the Qwen3-Omni baseline shows a clear trade-off.
 After response normalization, the fine-tuned model fixes 130 baseline errors but introduces 108 regressions.
-Many gains are in speech/voice/phonetics, music, counting, and sound-event questions.
-Regressions are also concentrated in speech/voice/phonetics and music, suggesting that fine-tuning improves audio dependence but can damage some prior knowledge or fine-grained perception.
+Many gains are in speech, voice, and phonetics, music, counting, and sound-event questions.
+Regressions are also concentrated in speech, voice, and phonetics and music, suggesting that fine-tuning improves audio dependence but can damage some prior knowledge or fine-grained perception.
 In the bucket analysis, the fine-tuned model improves hard-all-wrong and misleading-prior buckets, but loses accuracy on text-prior-easy and shuffle-leak buckets.
 This supports our final choice to include one train-only system and two train+development variants rather than relying on a single heavily specialized model.
 
+A notable failure mode is that the fine-tuned model can become more conservative about prior-based answers while still not improving the underlying acoustic perception enough for every category.
+For example, it improves several hard samples that require counting speakers, identifying subtle voice attributes, or distinguishing sound events, but it can regress on samples where the base model already used a robust prior or memorized common answer pattern.
+Thus, our submitted systems intentionally preserve diversity across the 5\% and 2.5\% empty-negative recipes instead of selecting only one checkpoint.
+
 \section{Submitted Systems}
-We prepare four candidate submissions.
-System 1 is the train-only strong-audio SFT checkpoint with 5\% empty negatives at 2000 steps and base Qwen3 response normalization.
-System 2 retrains the 5\% recipe on the union of train and development strong audio-dependent items.
-System 3 uses the train+development recipe with 2.5\% empty negatives and a 3000-step checkpoint.
-System 4 ensembles Systems 2 and 3; when the two systems disagree, System 2 is used as the tie breaker.
+We prepare four candidate submissions:
+\begin{itemize}
+    \item \textbf{System 1}: train-only strong-audio SFT with 5\% empty-audio negatives at 2000 steps, followed by base Qwen3 response normalization.
+    \item \textbf{System 2}: train+development strong-audio SFT with 5\% empty-audio negatives at 2000 steps, followed by base Qwen3 response normalization.
+    \item \textbf{System 3}: train+development strong-audio SFT with 2.5\% empty-audio negatives at 3000 steps, followed by base Qwen3 response normalization.
+    \item \textbf{System 4}: an ensemble of Systems 2 and 3. Predictions are first normalized, then the two systems vote. If they disagree, System 2 is used as the tie breaker.
+\end{itemize}
 Because the development labels are used in Systems 2--4, no held-out development score is reported for those final variants.
 
 \section{Conclusion}
