@@ -43,7 +43,7 @@ for name in A_train_only_empty5_2k B_train_dev_empty5_2k C_train_dev_empty5_1k; 
   python3 -m dcase_adqa.make_submission_outputs single \
     --manifest "${EVAL_MANIFEST}" \
     --pred "${OUT}/preds_basejudge/${name}.eval.basejudge.jsonl" \
-    --output-csv "${OUT}/csv_basejudge/Fred_IND_task5_${name}_basejudge.output.csv" \
+    --output-csv "${OUT}/csv_basejudge/Nam_IND_task5_${name}_basejudge.output.csv" \
     --output-jsonl "${OUT}/csv_basejudge/${name}.basejudge.parsed.jsonl"
 done
 
@@ -52,7 +52,7 @@ python3 -m dcase_adqa.make_submission_outputs ensemble \
   --name A --pred "${OUT}/preds_basejudge/A_train_only_empty5_2k.eval.basejudge.jsonl" \
   --name B --pred "${OUT}/preds_basejudge/B_train_dev_empty5_2k.eval.basejudge.jsonl" \
   --tie-breaker B \
-  --output-csv "${OUT}/csv_basejudge/Fred_IND_task5_ensemble_AB_Btie_basejudge.output.csv" \
+  --output-csv "${OUT}/csv_basejudge/Nam_IND_task5_ensemble_AB_Btie_basejudge.output.csv" \
   --output-jsonl "${OUT}/csv_basejudge/ensemble_AB_Btie_basejudge.parsed.jsonl"
 
 summary=$(python3 - <<'PY_SUM'

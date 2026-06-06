@@ -1,83 +1,86 @@
-\documentclass[10pt,a4paper]{article}
-\usepackage[margin=1in]{geometry}
+\documentclass[conference]{IEEEtran}
+\usepackage{dcase2025_techrep}
 \usepackage{booktabs}
-\usepackage{hyperref}
-\usepackage{graphicx}
-\usepackage{amsmath}
+\usepackage{url}
 
 \title{Audio-Dependency-Aware Post-Training of Qwen3-Omni for DCASE 2026 Task 5}
-\author{TODO: Fred Nam \and Independent researcher}
-\date{}
+
+\author{\IEEEauthorblockN{Hyeonuk Nam}
+\IEEEauthorblockA{Independent researcher\\
+Email: frednam@kaist.ac.kr}}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
 This technical report describes our system for DCASE 2026 Task 5, Audio-Dependent Question Answering.
-We build on the open-source Qwen3-Omni 30B-A3B model and focus on reducing shortcut reliance on the textual question prior.
-Our best development systems use LoRA supervised fine-tuning on audio-dependent training items, small proportions of empty-audio negative examples, and a text-only response normalizer for parse-failed model generations.
-On the development set, the strongest train-only system reaches 67.27\% accuracy after response normalization, compared with 65.90\% for the local Qwen3-Omni baseline.
+We build on the open-source Qwen3-Omni-30B-A3B-Instruct model and focus on reducing shortcut reliance on the textual question prior.
+Our strongest development systems use LoRA supervised fine-tuning on audio-dependent training items, small proportions of empty-audio negative examples, and a text-only response normalizer for parse-failed model generations.
+The best train-only system reaches 67.27\% development accuracy after response normalization, compared with 65.90\% for our local Qwen3-Omni baseline.
 \end{abstract}
 
-\section{Task and Constraints}
-DCASE 2026 Task 5 evaluates top-1 accuracy on ADQA-Bench, a multiple-choice audio-dependent question answering benchmark.
-The final inference system must use open-source large audio-language models, with no single model component above 30B parameters and no more than 100B total parameters for agent or ensemble systems.
-Each output file contains one plain answer text per evaluation question.
+\section{Introduction}
+DCASE 2026 Task 5 evaluates audio-dependent multiple-choice question answering.
+A central difficulty of the task is that large audio-language models can answer some questions from textual priors without using the audio signal.
+Our approach therefore keeps the model architecture simple and concentrates on post-training data selection and inference-time response normalization.
 
-\section{Base Model and Prompting}
+\section{System Overview}
 All submitted systems are based on Qwen3-Omni-30B-A3B-Instruct.
-We use 4-bit quantization for local inference and LoRA fine-tuning with rank 4, alpha 8, dropout 0.05, targeting the query and value projections.
+We apply parameter-efficient LoRA fine-tuning with rank 4, alpha 8, dropout 0.05, and trainable query and value projections.
 The audio tower and multimodal projector are frozen.
-During answer generation, the model receives the audio and the question with four choices and is instructed to output only the exact option text.
+Inference uses greedy decoding with an instruction to output only the exact option text.
 
-\section{Audio-Dependency Filtering}
-We first evaluate the base model under diagnostic ablations on the training split: normal audio-question pairs, empty-audio questions, and shuffled-audio questions.
-Training items are bucketed by whether the base model requires the correct audio to answer correctly.
-The main SFT subset uses the \emph{strong audio-dependent} bucket, excluding easy text-prior cases where the answer can be inferred without audio.
+\section{Audio-Dependency-Aware Training Data}
+We first run diagnostic ablations on the official training set using normal audio-question pairs, empty-audio questions, and shuffled-audio questions.
+Items are grouped according to whether the base model appears to require the correct audio to answer correctly.
+The main supervised fine-tuning subset uses the strong audio-dependent bucket and excludes easy text-prior samples.
 
-\section{Negative Unknown Examples}
-To make the model less willing to answer from question priors alone, we add a small number of empty-audio negative examples.
-For these examples, the audio is removed and the target answer is a fixed unknown response, ``Cannot be determined from the audio.''
-We sweep the ratio of such negatives and find that 5\% and 2.5\% are the strongest settings on the development set.
+\section{Empty-Audio Negative Examples}
+To reduce unsupported guessing, we add a small number of empty-audio negative examples.
+For these examples the audio input is removed and the target response is ``Cannot be determined from the audio.''
+We sweep the negative ratio and find 5\% and 2.5\% to be the strongest settings among the tested systems.
 
 \section{Response Normalization and Ensembling}
-Raw generations are first parsed by exact option-text matching and letter-prefix stripping.
-For parse failures, we optionally use a base Qwen3-Omni text-only normalizer that maps the raw generation to one of the provided choices.
-This normalizer is counted as an additional 30B model component in the submitted system metadata.
-Our ensemble submission combines two fine-tuned systems by majority vote; in a 1:1 tie, the development-best train+dev empty-5\% system is used as the tie breaker.
+Raw model outputs are first parsed by exact option-text matching and simple prefix stripping.
+For parse failures, selected submissions use the base Qwen3-Omni model as a text-only response normalizer over the candidate choices.
+This normalizer is counted as an additional 30B model component in the metadata.
+The ensemble submission combines two fine-tuned systems by voting; tied cases are resolved by the train+dev empty-5\% system.
 
-\section{Experiments}
-\begin{table}[h]
+\section{Development Results}
+Table~\ref{tab:dev} summarizes the main development results.
+The judge accuracy column applies the text-only response normalizer only to parse-failed samples.
+
+\begin{table}[t]
 \centering
-\begin{tabular}{lrrrr}
+\caption{Development-set accuracy for main systems.}
+\label{tab:dev}
+\begin{tabular}{lrrr}
 \toprule
-System & Step & Strict Acc. & Parse Bad & Judge Acc. \\
+System & Step & Strict Acc. & Judge Acc. \\
 \midrule
-Qwen3-Omni local baseline & -- & 65.90 & 1 & -- \\
-Strong SFT + empty 5\% & 1000 & 64.78 & 26 & 66.09 \\
-Strong SFT + empty 5\% & 2000 & 66.02 & 27 & 67.27 \\
-Strong SFT + empty 5\% & 3000 & 65.28 & 28 & 66.52 \\
-Strong SFT + empty 2.5\% & 3000 & 65.77 & 28 & 67.02 \\
-Strong SFT + empty+shuffle 10\% & 1000 & 64.97 & 26 & 66.27 \\
+Qwen3-Omni local baseline & -- & 65.90 & -- \\
+Strong SFT + empty 5\% & 1000 & 64.78 & 66.09 \\
+Strong SFT + empty 5\% & 2000 & 66.02 & 67.27 \\
+Strong SFT + empty 5\% & 3000 & 65.28 & 66.52 \\
+Strong SFT + empty 2.5\% & 3000 & 65.77 & 67.02 \\
+Strong SFT + empty+shuffle 10\% & 1000 & 64.97 & 66.27 \\
 \bottomrule
 \end{tabular}
-\caption{Development-set results. Judge accuracy uses the Qwen3-Omni text-only response normalizer only for parse-failed samples.}
 \end{table}
 
 \section{Submitted Systems}
-We prepare four candidate submissions:
-\begin{enumerate}
-  \item Train-only strong SFT with 5\% empty negatives at 2000 steps, plus base Qwen3 response normalization.
-  \item Train+dev strong SFT with 5\% empty negatives at 2000 steps, plus base Qwen3 response normalization.
-  \item Train+dev strong SFT with 2.5\% empty negatives at 3000 steps, plus base Qwen3 response normalization.
-  \item An ensemble of systems 2 and 3 with system 2 as tie breaker, plus base Qwen3 response normalization.
-\end{enumerate}
+We prepare four candidate submissions.
+System 1 is the best train-only checkpoint with 5\% empty negatives.
+System 2 retrains the same recipe on the union of train and development strong audio-dependent items.
+System 3 uses the train+dev recipe with 2.5\% empty negatives and a longer 3000-step checkpoint.
+System 4 ensembles Systems 2 and 3 with System 2 as the tie breaker.
 
-\section{Limitations}
-Most improvements are modest on the development set, suggesting that the model still relies partly on prior knowledge and incomplete audio perception.
-RL-style follow-up experiments and category-balanced resampling did not outperform the simple strong-audio SFT recipe in our current runs.
-The train+dev systems cannot be validated on held-out development labels and are intended only as final evaluation submissions.
+\section{Discussion}
+The improvements over the local Qwen3-Omni baseline are modest, but consistent with the goal of reducing text-prior shortcuts.
+Experiments with RL-style continuation, category-balanced resampling, and shuffled-audio negatives did not outperform the simple strong-audio SFT recipe in our current runs.
+The train+dev systems are intended only as final evaluation submissions because development labels are used during training.
 
-\bibliographystyle{plain}
+\bibliographystyle{IEEEtran}
 \bibliography{references}
+
 \end{document}

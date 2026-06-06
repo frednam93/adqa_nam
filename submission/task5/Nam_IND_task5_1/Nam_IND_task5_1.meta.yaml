@@ -1,0 +1,30 @@
+# Submission information for DCASE 2026 Task 5
+submission:
+  label: Nam_IND_task5_1
+  name: Qwen3-Omni Strong Empty5
+  abbreviation: Q3-E5
+
+authors:
+  - lastname: Nam
+    firstname: Hyeonuk
+    email: frednam@kaist.ac.kr
+    corresponding: true
+    affiliation:
+      abbreviation: IND
+      institute: Independent researcher
+      department: none
+      location: Seoul, Republic of Korea
+
+system:
+  end_to_end: false
+  pretrained: true
+  pre_loaded: Qwen3-Omni-30B-A3B-Instruct
+  autoregressive_model: true
+  model_size: 60B
+  light_weighted: false
+  post_processing: Exact option-text matching followed by base Qwen3-Omni text-only response normalization for parse-failed outputs.
+  external_data_resources: []
+
+results:
+  development:
+    accuracy: 67.270%
