@@ -31,6 +31,7 @@ All systems use Qwen3-Omni-30B-A3B-Instruct~\cite{qwen3omni2025,qwen3omnihf}.
 We fine-tune with LLaMA-Factory~\cite{zheng2024llamafactory} using LoRA~\cite{hu2021lora} with rank 4, alpha 8, dropout 0.05, and trainable query and value projections only.
 The audio tower and multimodal projector are frozen.
 Inference uses greedy decoding with a prompt that asks the model to output only the exact option text.
+The training and evaluation code will be released at \url{https://github.com/frednam93/adqa_nam}.
 
 For selected submissions, raw generations are post-processed in two stages.
 First, deterministic parsing checks exact option-text matches and simple letter or prefix patterns.
@@ -50,6 +51,28 @@ In the empty-audio condition, the question and choices remain unchanged but no a
 In the shuffled-audio condition, the question is paired with audio from a different sample; we used both random shuffling and category-aware shuffling during analysis.
 In a choice-shuffled condition, option order is changed to test whether the model is sensitive to answer position or option wording.
 These variants are used only for analysis and data selection, not as direct labels for the final evaluation set.
+Table~\ref{tab:diagnostic_scores} shows that the development set remains difficult when the audio is removed or replaced, while a stratified train subset is much easier even under text-only or mismatched-audio conditions.
+This mismatch motivated filtering out easy text-prior training examples rather than fine-tuning on the full train split.
+
+\begin{table}[t]
+\centering
+\caption{Qwen3-Omni diagnostic accuracy under counterfactual inputs.}
+\label{tab:diagnostic_scores}
+\begin{tabular}{lrr}
+\toprule
+Input condition & Dev & Train stratified \\
+\midrule
+Normal audio-question pair & 65.90 & 89.33 \\
+Empty audio & 30.93 & 57.21 \\
+Random shuffled audio & 29.25 & 45.70 \\
+Same-category shuffled audio & 29.87 & 49.58 \\
+Cross-category shuffled audio & 27.44 & 47.27 \\
+Choice order shuffled & \textbf{66.27} & 88.85 \\
+Audio only, no prompt & 15.00 & 8.61 \\
+Generic prompt & 16.24 & 4.36 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Diagnostic Audio-Dependency Analysis}
 \label{sec:diagnostics}
@@ -84,7 +107,7 @@ This analysis also revealed that many development samples are highly prior-drive
 The main supervised fine-tuning set contains only strong audio-dependent training items.
 A sample is treated as strong audio-dependent when Qwen3-Omni answers the normal audio-question pair correctly but fails when the audio is removed and when the audio is shuffled.
 This criterion intentionally removes many easy samples that are solvable from text priors alone.
-We also tested broader subsets that include hard audio-dependent candidates and shuffle-leak items, but these did not improve development accuracy.
+We also tested broader subsets that include hard audio-dependent candidates, weak/non-easy audio-dependent items, and shuffle-leak items, but these did not improve development accuracy.
 
 To discourage unsupported guessing, we add empty-audio negative examples.
 For these examples, the audio input is removed and the target response is ``Cannot be determined from the audio.''
@@ -93,6 +116,31 @@ We tested several negative-example ratios, from 2.5\% to 20\% of the positive st
 We additionally tested shuffled-audio unknown examples, where the question is paired with unrelated audio and the target is again the unknown response.
 This was intended to make the model reject mismatched audio-question pairs, but in our runs the combined empty+shuffle setting did not outperform the simpler empty-only recipe.
 We sweep the negative-example ratio and the checkpoint step, using the development set for model selection.
+Table~\ref{tab:data_variants} summarizes the main fine-tuning datasets.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Fine-tuning dataset variants. Counts are training examples after adding negative examples when applicable.}
+\label{tab:data_variants}
+\begin{tabular}{lrl}
+\toprule
+Variant & Count & Description \\
+\midrule
+Strong & 4,738 & Normal correct; empty and shuffled fail \\
+Strong+hard & 6,050 & Strong plus hard audio candidates \\
+Non-easy & 7,762 & Strong, hard, and shuffle-leak candidates \\
+Strong+empty 2.5\% & 4,856 & Strong plus 118 empty-audio unknowns \\
+Strong+empty 5\% & 4,975 & Strong plus 237 empty-audio unknowns \\
+Strong+empty 7.5\% & 5,093 & Strong plus 355 empty-audio unknowns \\
+Strong+empty 10\% & 5,212 & Strong plus 474 empty-audio unknowns \\
+Strong+empty 20\% & 5,686 & Strong plus 948 empty-audio unknowns \\
+Strong+shuffle 5\% & 4,975 & Strong plus shuffled-audio unknowns \\
+Strong+empty+shuffle 10\% & 5,212 & Both negative types \\
+Category-balanced v3 & 10,594 & Approx. balanced categories, 5\% empty \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Development Results}
 Table~\ref{tab:main_results} summarizes the main train-only systems.
@@ -110,7 +158,7 @@ Qwen3-Omni baseline & -- & 65.90 & -- \\
 Strong only & 3000 & 64.97 & 66.21 \\
 Strong + empty 2.5\% & 3000 & 65.77 & 67.02 \\
 Strong + empty 5\% & 1000 & 64.78 & 66.09 \\
-Strong + empty 5\% & 2000 & 66.02 & 67.27 \\
+Strong + empty 5\% & 2000 & \textbf{66.02} & \textbf{67.27} \\
 Strong + empty 5\% & 3000 & 65.28 & 66.52 \\
 Strong + empty 7.5\% & 2500 & 65.34 & 66.52 \\
 Strong + empty 10\% & 1000 & 64.90 & 66.15 \\
@@ -127,6 +175,41 @@ Letter-only and explicit chain-of-thought inference prompts were also worse than
 The exact-option prompt sometimes produces long non-option text, especially for speech-content questions.
 However, these failures are relatively rare, and the text-only normalizer recovers most of them without changing already parsed predictions.
 
+Table~\ref{tab:subset_results} gives a more complete view of the dataset-selection sweep.
+The most important negative result is that simply adding more difficult or weakly audio-dependent samples degrades accuracy.
+The best result came from the smaller strong-audio subset with a small empty-audio negative set, not from the larger non-easy or category-balanced pools.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Additional Qwen3-Omni SFT ablations. The best strict and judge scores in this table are bolded.}
+\label{tab:subset_results}
+\begin{tabular}{lrrr}
+\toprule
+Training variant & Step & Strict & Judge \\
+\midrule
+Strong & 1000 & 63.91 & 65.28 \\
+Strong & 2000 & 64.59 & 65.84 \\
+Strong & 3000 & 64.97 & 66.21 \\
+Strong+hard & 1000 & 61.36 & 62.54 \\
+Strong+hard & 3000 & 61.11 & 62.35 \\
+Non-easy & 1000 & 61.85 & 62.97 \\
+Non-easy & 3000 & 60.55 & 61.61 \\
+Non-easy+empty 5\% & 1000 & 62.91 & 64.22 \\
+Non-easy+empty 5\% & 3000 & 62.35 & 63.53 \\
+Non-easy+shuffle 5\% & 2000 & 61.92 & 63.16 \\
+Non-easy+empty+shuffle 10\% & 3000 & 62.60 & 63.91 \\
+Strong+shuffle 5\% & 3000 & 64.41 & 65.65 \\
+Strong+empty+shuffle 10\% & 1000 & 64.97 & 66.27 \\
+Strong+empty 2.5\% & 2000 & 65.46 & 66.83 \\
+Strong+empty 2.5\% & 3000 & 65.77 & 67.02 \\
+Strong+empty 5\% & 2000 & \textbf{66.02} & \textbf{67.27} \\
+Strong+empty 7.5\% & 2500 & 65.34 & 66.52 \\
+Strong+empty 20\% & 3000 & 65.09 & 66.21 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{Additional Ablations and Failed Directions}
 \label{sec:failed}
 We evaluated several alternative improvement directions; none replaced the simple strong-audio SFT recipe.
@@ -134,7 +217,8 @@ Table~\ref{tab:failed} lists the main negative results.
 
 \begin{table}[t]
 \centering
-\caption{Representative failed or deprioritized experiments on the development set.}
+\small
+\caption{Representative failed or deprioritized experiments on the development set. Best strict and judge scores in this table are bolded.}
 \label{tab:failed}
 \begin{tabular}{lrr}
 \toprule
@@ -147,7 +231,9 @@ Silent CoT SFT, 3k & 61.05 & -- \\
 Explicit CoT SFT, 3k & 58.49 & -- \\
 Category-balanced v3 & 64.09 & -- \\
 Catbalmix10, ckpt2000 & 65.21 & -- \\
-SimPO~\cite{meng2024simpo} continuation, 500 & 65.65 & 66.96 \\
+Empty5 repeat, seed2 best & 64.16 & -- \\
+Empty5 repeat, seed3 best & 65.21 & -- \\
+SimPO~\cite{meng2024simpo} continuation, 500 & \textbf{65.65} & \textbf{66.96} \\
 DPO~\cite{rafailov2023dpo} continuation, 500 & 65.15 & 66.46 \\
 SFT-init GRPO~\cite{shao2024deepseekmath}, 100 & 65.09 & 66.21 \\
 SFT-init DAPO-lite~\cite{yu2025dapo}, 100 & 65.21 & 66.40 \\
@@ -160,6 +246,10 @@ Empty-aware DAPO-lite~\cite{yu2025dapo}, 100 & 64.72 & 65.90 \\
 The early answer-only Qwen3 fine-tuning runs degraded the base model, even though the base model was already the strongest single model among the tested backbones.
 Category-level model routing provided only a small oracle gain: choosing the best model per rule-based category would reach 66.83\%, compared with 65.90\% for Qwen3-Omni base.
 The much higher per-sample oracle of 90.85\% indicates complementary errors, but coarse category routing alone is insufficient.
+We also tested full category rebalancing and additive category-balanced mixing.
+The best full rebalanced run was category-balanced v3 at 64.09\% strict accuracy, and the best additive variant was strong-empty5 with 10\% category-balanced samples at 65.21\%.
+Both remained below the strong-empty recipe.
+Repeating the 5\% empty-audio recipe with two additional random seeds also failed to improve the original run: the best strict accuracies were 64.16\% and 65.21\%.
 Preference/RL continuation also failed to exceed the 5\% empty-audio SFT checkpoint.
 The tested preference objectives were DPO~\cite{rafailov2023dpo}, SimPO~\cite{meng2024simpo}, ORPO~\cite{hong2024orpo}, and KTO~\cite{ethayarajh2024kto}; the RL-style objectives were GRPO~\cite{shao2024deepseekmath} and a small DAPO-style variant~\cite{yu2025dapo}.
 ORPO collapsed into invalid outputs in our run, and KTO was not used because the audio metadata path was dropped by the training pipeline.
