@@ -7,7 +7,7 @@ OUT=${ROOT}/outputs/final_submission
 PREDS=(
   ${OUT}/preds/A_train_only_empty5_2k.eval.jsonl
   ${OUT}/preds/B_train_dev_empty5_2k.eval.jsonl
-  ${OUT}/preds/C_train_dev_empty5_1k.eval.jsonl
+  ${OUT}/preds/C_train_dev_empty2p5_3k.eval.jsonl
 )
 mkdir -p "${OUT}/preds_basejudge" "${OUT}/csv_basejudge"
 
@@ -26,7 +26,7 @@ while true; do
     [[ -s "${pred}" ]] || ready=0
   done
   [[ "${ready}" == 1 ]] && break
-  echo "$(date '+%m%d %H:%M:%S') waiting for A/B/C eval predictions..."
+  echo "$(date '+%m%d %H:%M:%S') waiting for final A/B/C eval predictions..."
   sleep 60
 done
 
@@ -39,7 +39,7 @@ python3 -m dcase_adqa.judge_eval_parsebad \
   --pred "${PREDS[1]}" \
   --pred "${PREDS[2]}"
 
-for name in A_train_only_empty5_2k B_train_dev_empty5_2k C_train_dev_empty5_1k; do
+for name in A_train_only_empty5_2k B_train_dev_empty5_2k C_train_dev_empty2p5_3k; do
   python3 -m dcase_adqa.make_submission_outputs single \
     --manifest "${EVAL_MANIFEST}" \
     --pred "${OUT}/preds_basejudge/${name}.eval.basejudge.jsonl" \
@@ -49,11 +49,11 @@ done
 
 python3 -m dcase_adqa.make_submission_outputs ensemble \
   --manifest "${EVAL_MANIFEST}" \
-  --name A --pred "${OUT}/preds_basejudge/A_train_only_empty5_2k.eval.basejudge.jsonl" \
   --name B --pred "${OUT}/preds_basejudge/B_train_dev_empty5_2k.eval.basejudge.jsonl" \
+  --name C --pred "${OUT}/preds_basejudge/C_train_dev_empty2p5_3k.eval.basejudge.jsonl" \
   --tie-breaker B \
-  --output-csv "${OUT}/csv_basejudge/Nam_IND_task5_ensemble_AB_Btie_basejudge.output.csv" \
-  --output-jsonl "${OUT}/csv_basejudge/ensemble_AB_Btie_basejudge.parsed.jsonl"
+  --output-csv "${OUT}/csv_basejudge/Nam_IND_task5_ensemble_BC_Btie_basejudge.output.csv" \
+  --output-jsonl "${OUT}/csv_basejudge/ensemble_BC_Btie_basejudge.parsed.jsonl"
 
 summary=$(python3 - <<'PY_SUM'
 import json
@@ -65,10 +65,10 @@ for p in sorted((root/'preds_basejudge').glob('*.basejudge.jsonl')):
     original_bad=sum(r.get('prediction_index') == -1 for r in rows)
     judge_bad=sum(r.get('judge_prediction_index') == -1 for r in rows)
     print(f'{p.name}: original_bad={original_bad} judge_bad={judge_bad}')
-ens=root/'csv_basejudge/ensemble_AB_Btie_basejudge.parsed.jsonl'
+ens=root/'csv_basejudge/ensemble_BC_Btie_basejudge.parsed.jsonl'
 if ens.exists():
     rows=[json.loads(x) for x in ens.read_text(encoding='utf-8').splitlines() if x.strip()]
-    print('AB ensemble:', dict(Counter(r['reason'] for r in rows)))
+    print('BC ensemble:', dict(Counter(r['reason'] for r in rows)))
 PY_SUM
 )
 echo "${summary}"
