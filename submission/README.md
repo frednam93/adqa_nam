@@ -8,7 +8,7 @@ Systems:
 - `Nam_IND_task5_1`: train-only strong empty-5% SFT checkpoint 2000, base Qwen3 judge post-processing.
 - `Nam_IND_task5_2`: train+dev strong empty-5% SFT checkpoint 2000, base Qwen3 judge post-processing.
 - `Nam_IND_task5_3`: train+dev strong empty-2.5% SFT checkpoint 3000, base Qwen3 judge post-processing.
-- `Nam_IND_task5_4`: ensemble of systems 2 and 3, tie broken by system 2, base Qwen3 judge post-processing.
+- `Nam_IND_task5_4`: ensemble of systems 1, 2, and 3 after Qwen3-8B parse-bad response normalization; remaining ties are broken by system 2. Total model size is 98B.
 
 Before final submission:
 - Fill author name, email, and affiliation TODO fields in `*.meta.yaml`.

@@ -1,8 +1,8 @@
 # Submission information for DCASE 2026 Task 5
 submission:
   label: Nam_IND_task5_4
-  name: Qwen3-Omni TrainDev Ensemble
-  abbreviation: Q3-Ens
+  name: Qwen3-Omni ABC Ensemble with Small Judge
+  abbreviation: Q3-ABC-SJ
 
 authors:
   - lastname: Nam
@@ -18,11 +18,11 @@ authors:
 system:
   end_to_end: false
   pretrained: true
-  pre_loaded: Qwen3-Omni-30B-A3B-Instruct
+  pre_loaded: Qwen3-Omni-30B-A3B-Instruct; Qwen3-8B
   autoregressive_model: true
-  model_size: 90B
+  model_size: 98B
   light_weighted: false
-  post_processing: Base Qwen3-Omni text-only response normalization followed by two-model voting; ties are broken by the train+dev empty-5% system.
+  post_processing: Qwen3-8B text-only response normalization on parse-failed outputs followed by three-model voting over systems 1, 2, and 3; remaining three-way ties are broken by system 2.
   external_data_resources: []
 
 results:

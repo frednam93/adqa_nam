@@ -17,7 +17,7 @@ This technical report describes our system for DCASE 2026 Task 5, Audio-Dependen
 We build on Qwen3-Omni-30B-A3B-Instruct, an open-source large audio-language model, and focus on reducing shortcut reliance on the textual question prior.
 Our strongest train-only system uses LoRA supervised fine-tuning on audio-dependent training items, a small number of empty-audio negative examples, and a text-only response normalizer for parse-failed model generations.
 On the official development set, the best train-only system reaches 67.27\% accuracy after response normalization, compared with 65.90\% for our local Qwen3-Omni baseline.
-Final submissions additionally include train+development variants and a two-model ensemble.
+Final submissions additionally include train+development variants and a three-model ensemble with a smaller text-only normalizer.
 \end{abstract}
 
 \section{Introduction}
@@ -35,9 +35,9 @@ The training and evaluation code will be released at \url{https://github.com/fre
 
 For selected submissions, raw generations are post-processed in two stages.
 First, deterministic parsing checks exact option-text matches and simple letter or prefix patterns.
-Second, parse-failed responses are passed to the base Qwen3-Omni model as a text-only multiple-choice response normalizer.
-This normalizer sees only the candidate choices and the raw generation; it does not receive the audio or the ground-truth label.
-We count this normalizer as an additional 30B model component in the metadata.
+Second, parse-failed responses are passed to a text-only multiple-choice response normalizer.
+For single-model submissions we use base Qwen3-Omni as the normalizer; for the three-model ensemble we use Qwen3-8B so that the total model size remains below the 100B system limit.
+The normalizer sees only the candidate choices and the raw generation; it does not receive the audio or the ground-truth label.
 
 \section{Prompting and Input Variants}
 The default training and inference prompt presents the audio, the question, and four option texts.
@@ -272,7 +272,7 @@ We prepare four candidate submissions:
     \item \textbf{System 1}: train-only strong-audio SFT with 5\% empty-audio negatives at 2000 steps, followed by base Qwen3 response normalization.
     \item \textbf{System 2}: train+development strong-audio SFT with 5\% empty-audio negatives at 2000 steps, followed by base Qwen3 response normalization.
     \item \textbf{System 3}: train+development strong-audio SFT with 2.5\% empty-audio negatives at 3000 steps, followed by base Qwen3 response normalization.
-    \item \textbf{System 4}: an ensemble of Systems 2 and 3. Predictions are first normalized, then the two systems vote. If they disagree, System 2 is used as the tie breaker.
+    \item \textbf{System 4}: an ensemble of Systems 1, 2, and 3. Parse-failed outputs are normalized by Qwen3-8B, then the three systems vote. If all three systems disagree, System 2 is used as the tie breaker.
 \end{itemize}
 Because the development labels are used in Systems 2--4, no held-out development score is reported for those final variants.
 
