@@ -93,6 +93,7 @@ def main() -> None:
     parser.add_argument("--pred", type=Path, action="append", required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--model", type=Path, default=Path("/home/user/ssdmain/models/dcase_adqa/qwen3_8b"))
+    parser.add_argument("--tag", default="qwen3_8b_judge")
     parser.add_argument("--max-new-tokens", type=int, default=8)
     parser.add_argument("--load-4bit", action="store_true", default=True)
     args = parser.parse_args()
@@ -119,12 +120,15 @@ def main() -> None:
             method = "original"
             if has_labels:
                 correct_before += int(row.get("prediction_index", -1) == item["answer_index"])
+            choices = item.get("choices") or item.get("multi_choice")
+            if choices is None:
+                raise KeyError(f"manifest row {row['id']} has neither choices nor multi_choice")
             if judged_idx == -1:
                 parse_bad += 1
                 judged_idx, judged_raw = judge_one(
                     tokenizer,
                     model,
-                    item["choices"],
+                    choices,
                     row.get("raw_generation") or row.get("prediction") or "",
                     args.max_new_tokens,
                 )
@@ -138,7 +142,7 @@ def main() -> None:
                     "judge_method": method,
                     "judge_raw": judged_raw,
                     "judge_prediction_index": judged_idx,
-                    "judge_prediction": item["choices"][judged_idx] if judged_idx >= 0 else row.get("prediction", ""),
+                    "judge_prediction": choices[judged_idx] if judged_idx >= 0 else row.get("prediction", ""),
                 }
             )
             if has_labels:
@@ -146,7 +150,7 @@ def main() -> None:
             out_rows.append(out)
             if i % 100 == 0:
                 print(f"{pred_path.name}: judged {i}/{len(rows)} parse_bad={parse_bad} fixed={fixed}", flush=True)
-        out_path = args.out_dir / f"{pred_path.stem}.qwen3_8b_judge.jsonl"
+        out_path = args.out_dir / f"{pred_path.stem}.{args.tag}.jsonl"
         out_path.write_text("\n".join(json.dumps(row, ensure_ascii=False) for row in out_rows) + "\n", encoding="utf-8")
         summary = {
             "file": pred_path.name,
@@ -168,7 +172,7 @@ def main() -> None:
             )
         summaries.append(summary)
         print(json.dumps(summary, ensure_ascii=False), flush=True)
-    summary_path = args.out_dir / "qwen3_8b_judge_summary.json"
+    summary_path = args.out_dir / f"{args.tag}_summary.json"
     summary_path.write_text(json.dumps(summaries, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"wrote {summary_path}", flush=True)
 

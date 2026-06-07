@@ -20,7 +20,9 @@ def write_csv(path: Path, rows: list[dict]) -> None:
 
 
 def clean_prediction(row: dict, item: dict, fallback_index: int = 0) -> tuple[int, str, str]:
-    choices = item["choices"]
+    choices = item.get("choices") or item.get("multi_choice")
+    if choices is None:
+        raise KeyError(f"manifest row {item.get('id')} has neither choices nor multi_choice")
     idx = row.get("judge_prediction_index", row.get("prediction_index", -1))
     if isinstance(idx, int) and 0 <= idx < len(choices):
         return idx, choices[idx], "parsed"
@@ -71,7 +73,10 @@ def ensemble(preds: list[Path], names: list[str], manifest: Path, output_csv: Pa
         else:
             idx = votes[tie_idx][0]
             reason = f"tie_break_{tie_breaker}"
-        answer = item["choices"][idx]
+        choices = item.get("choices") or item.get("multi_choice")
+        if choices is None:
+            raise KeyError(f"manifest row {item.get('id')} has neither choices nor multi_choice")
+        answer = choices[idx]
         stats[reason] += 1
         csv_rows.append({"question": item["id"], "answer": answer})
         json_rows.append(

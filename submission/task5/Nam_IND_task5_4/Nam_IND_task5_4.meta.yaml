@@ -18,11 +18,11 @@ authors:
 system:
   end_to_end: false
   pretrained: true
-  pre_loaded: Qwen3-Omni-30B-A3B-Instruct; Qwen3-8B
+  pre_loaded: Qwen3-Omni-30B-A3B-Instruct; Qwen3.5-9B
   autoregressive_model: true
-  model_size: 98B
+  model_size: 99B
   light_weighted: false
-  post_processing: Qwen3-8B text-only response normalization on parse-failed outputs followed by three-model voting over systems 1, 2, and 3; remaining three-way ties are broken by system 2.
+  post_processing: Qwen3.5-9B text-only response normalization on parse-failed outputs followed by three-model voting over systems 1, 2, and 3; remaining three-way ties are broken by system 2.
   external_data_resources: []
 
 results:

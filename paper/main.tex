@@ -36,7 +36,7 @@ The training and evaluation code will be released at \url{https://github.com/fre
 For selected submissions, raw generations are post-processed in two stages.
 First, deterministic parsing checks exact option-text matches and simple letter or prefix patterns.
 Second, parse-failed responses are passed to a text-only multiple-choice response normalizer.
-For single-model submissions we use base Qwen3-Omni as the normalizer; for the three-model ensemble we use Qwen3-8B so that the total model size remains below the 100B system limit.
+For single-model submissions we use base Qwen3-Omni as the normalizer; for the three-model ensemble we use Qwen3.5-9B so that the total model size remains below the 100B system limit.
 The normalizer sees only the candidate choices and the raw generation; it does not receive the audio or the ground-truth label.
 
 \section{Prompting and Input Variants}
@@ -272,7 +272,7 @@ We prepare four candidate submissions:
     \item \textbf{System 1}: train-only strong-audio SFT with 5\% empty-audio negatives at 2000 steps, followed by base Qwen3 response normalization.
     \item \textbf{System 2}: train+development strong-audio SFT with 5\% empty-audio negatives at 2000 steps, followed by base Qwen3 response normalization.
     \item \textbf{System 3}: train+development strong-audio SFT with 2.5\% empty-audio negatives at 3000 steps, followed by base Qwen3 response normalization.
-    \item \textbf{System 4}: an ensemble of Systems 1, 2, and 3. Parse-failed outputs are normalized by Qwen3-8B, then the three systems vote. If all three systems disagree, System 2 is used as the tie breaker.
+    \item \textbf{System 4}: an ensemble of Systems 1, 2, and 3. Parse-failed outputs are normalized by Qwen3.5-9B, then the three systems vote. If all three systems disagree, System 2 is used as the tie breaker.
 \end{itemize}
 Because the development labels are used in Systems 2--4, no held-out development score is reported for those final variants.
 
