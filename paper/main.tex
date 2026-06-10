@@ -30,7 +30,8 @@ This motivated an audio-dependency-aware training recipe inspired by audio contr
 
 \section{System Overview}
 All systems use Qwen3-Omni-30B-A3B-Instruct~\cite{qwen3omni2025,qwen3omnihf}.
-We fine-tune with LLaMA-Factory~\cite{zheng2024llamafactory} using LoRA~\cite{hu2021lora} with rank 4, alpha 8, dropout 0.05, and trainable query and value projections only.
+We fine-tune with LLaMA-Factory~\cite{zheng2024llamafactory} using 4-bit bitsandbytes quantization and LoRA~\cite{hu2021lora} with rank 4, alpha 8, dropout 0.05, and trainable query and value projections only.
+Training uses bfloat16, per-device batch size 8, no gradient accumulation, learning rate $5\times10^{-5}$, cosine scheduling, 3\% warmup, cutoff length 2048, and 2000--3000 maximum update steps depending on the submitted system.
 The audio tower and multimodal projector are frozen.
 Inference uses greedy decoding with a prompt that asks the model to output only the exact option text.
 The training and evaluation code will be released at \url{https://github.com/frednam93/adqa_nam}.
@@ -127,6 +128,7 @@ Wrong normal but shuffle correct & 277 & 135 \\
 \end{table}
 
 The train split contains 4,738 strong audio-dependent items, approximately 24.3\% of the full train set.
+This full-train filtering pass used 19,480 training items; Qwen3-Omni answered 17,098 correctly in the normal condition, 11,441 with empty audio, and 9,140 with random shuffled audio.
 The development set contains 374 strong audio-dependent items, approximately 23.3\%.
 High-volume categories include speaker identity, speech content, temporal reasoning, speech paralinguistics, music, and sound events.
 This analysis also revealed that many development samples are highly prior-driven; therefore, optimizing only for the aggregate score can favor models that preserve text-prior behavior rather than models that improve audio grounding.
@@ -303,6 +305,8 @@ We prepare four candidate submissions:
     \item \textbf{System 4}: an ensemble of Systems 1, 2, and 3. Parse-failed outputs are normalized by Qwen3.5-9B, then the three systems vote. If all three systems disagree, System 2 is used as the tie breaker.
 \end{itemize}
 System 4 is included as a diversity-oriented candidate rather than as a confirmed improvement over Systems 2 or 3: its three-model vote may reduce model-specific errors, but its Qwen3.5-9B parse-failure normalizer is weaker than the base Qwen3-Omni normalizer used by the single-system submissions.
+For Systems 2 and 3, the final SFT pool combines the 4,738 train strong-audio items with the 374 development strong-audio items.
+System 2 adds 256 empty-audio negatives for a total of 5,368 SFT examples, while System 3 adds 128 empty-audio negatives for a total of 5,240 examples.
 Because the development labels are used in Systems 2--4, no held-out development score is reported for those final variants.
 
 \section{Conclusion}
