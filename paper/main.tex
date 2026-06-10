@@ -15,7 +15,8 @@ frednam@kaist.ac.kr}
 \begin{abstract}
 This technical report describes our system for DCASE 2026 Task 5, Audio-Dependent Question Answering.
 We build on Qwen3-Omni-30B-A3B-Instruct, an open-source large audio-language model, and focus on reducing shortcut reliance on the textual question prior.
-Our strongest train-only system uses LoRA supervised fine-tuning on audio-dependent training items, a small number of empty-audio negative examples, and a text-only response normalizer for parse-failed model generations.
+We first run Qwen3-Omni itself under normal, empty-audio, and shuffled-audio conditions; a training example is kept as a strong-audio item only when the model answers the normal audio-question pair correctly but fails both counterfactual variants.
+Our strongest train-only system then uses LoRA supervised fine-tuning on this filtered strong-audio subset, a small number of empty-audio negative examples, and a text-only response normalizer for parse-failed model generations.
 On the official development set, the best train-only system reaches 67.27\% accuracy after response normalization, compared with 65.90\% for our local Qwen3-Omni baseline.
 Final submissions additionally include train+development variants and a three-model ensemble with a smaller text-only normalizer.
 \end{abstract}
@@ -78,6 +79,10 @@ Generic prompt & 16.24 & 4.36 \\
 \section{Diagnostic Audio-Dependency Analysis}
 \label{sec:diagnostics}
 Before fine-tuning, we ran diagnostic inference on train and development samples under multiple conditions: normal audio-question pairs, empty-audio questions, and shuffled-audio questions.
+For each sample, we compare the parsed multiple-choice answer from the normal run with two counterfactual runs.
+We define a \emph{strong audio-dependent} item as one where Qwen3-Omni answers the normal audio-question pair correctly, but answers incorrectly when the audio is removed and also incorrectly when the audio is replaced by a shuffled clip.
+Items solved without audio are assigned to text-prior/easy buckets, while items that are normal-wrong or only partially disrupted by shuffling are kept as hard, weak, or shuffle-leak candidates rather than the main SFT subset.
+For the train split, these buckets determine which samples are used for SFT; for the development split, the same diagnostic is reported only for analysis and model selection, and no development or evaluation samples are removed when computing scores.
 The goal was not to create a perfect taxonomy, but to separate samples likely solved by text priors from samples where the model depends on the audio.
 Table~\ref{tab:buckets} shows the resulting bucket distribution.
 
@@ -105,9 +110,9 @@ High-volume categories include speaker identity, speech content, temporal reason
 This analysis also revealed that many development samples are highly prior-driven; therefore, optimizing only for the aggregate score can favor models that preserve text-prior behavior rather than models that improve audio grounding.
 
 \section{Fine-Tuning Data Construction}
-The main supervised fine-tuning set contains only strong audio-dependent training items.
-A sample is treated as strong audio-dependent when Qwen3-Omni answers the normal audio-question pair correctly but fails when the audio is removed and when the audio is shuffled.
-This criterion intentionally removes many easy samples that are solvable from text priors alone.
+The main supervised fine-tuning set contains only the strong audio-dependent training items selected by the three-run diagnostic filter described above.
+Concretely, we keep a training item if the base model is correct on the original audio and question, incorrect with empty audio, and incorrect with shuffled audio.
+This conservative rule intentionally removes many easy samples that are solvable from text priors alone; it also excludes normal-wrong hard samples from the primary recipe because their targets may require capabilities the current base model does not reliably expose.
 We also tested broader subsets that include hard audio-dependent candidates, weak/non-easy audio-dependent items, and shuffle-leak items, but these did not improve development accuracy.
 
 To discourage unsupported guessing, we add empty-audio negative examples.
