@@ -15,7 +15,8 @@ frednam@kaist.ac.kr}
 \begin{abstract}
 This technical report describes our system for DCASE 2026 Task 5, Audio-Dependent Question Answering.
 We build on Qwen3-Omni-30B-A3B-Instruct, an open-source large audio-language model, and focus on reducing shortcut reliance on the textual question prior.
-We first run Qwen3-Omni itself under normal, empty-audio, and shuffled-audio conditions; a training example is kept as a strong-audio item only when the model answers the normal audio-question pair correctly but fails both counterfactual variants.
+We first run Qwen3-Omni itself under normal, empty-audio, and shuffled-audio conditions, then bucket each sample by whether the base model is correct or wrong in each condition.
+A training example is kept as a strong-audio item only when the base model answers the normal audio-question pair correctly but fails both counterfactual variants; normal-wrong and counterfactual-correct cases are tracked separately as hard, misleading, or text-prior-like items.
 Our strongest train-only system then uses LoRA supervised fine-tuning on this filtered strong-audio subset, a small number of empty-audio negative examples, and a text-only response normalizer for parse-failed model generations.
 On the official development set, the best train-only system reaches 67.27\% accuracy after response normalization, compared with 65.90\% for our local Qwen3-Omni baseline.
 Final submissions additionally include train+development variants and a three-model ensemble with a smaller text-only normalizer.
@@ -79,12 +80,33 @@ Generic prompt & 16.24 & 4.36 \\
 \section{Diagnostic Audio-Dependency Analysis}
 \label{sec:diagnostics}
 Before fine-tuning, we ran diagnostic inference on train and development samples under multiple conditions: normal audio-question pairs, empty-audio questions, and shuffled-audio questions.
-For each sample, we compare the parsed multiple-choice answer from the normal run with two counterfactual runs.
-We define a \emph{strong audio-dependent} item as one where Qwen3-Omni answers the normal audio-question pair correctly, but answers incorrectly when the audio is removed and also incorrectly when the audio is replaced by a shuffled clip.
-Items solved without audio are assigned to text-prior/easy buckets, while items that are normal-wrong or only partially disrupted by shuffling are kept as hard, weak, or shuffle-leak candidates rather than the main SFT subset.
+For each sample, we parse the model's multiple-choice answer in each condition and record whether it matches the ground-truth answer.
+Let $N$, $E$, and $S$ denote correctness under the normal, empty-audio, and shuffled-audio conditions, respectively.
+The bucket assignment is based on this correctness pattern, not only on the type of counterfactual input.
+We define a \emph{strong audio-dependent} item as $N{=}1,E{=}0,S{=}0$: Qwen3-Omni answers the original audio-question pair correctly, but fails both counterfactual variants.
+Items with $N{=}1$ and at least one counterfactual success are treated as text-prior-like, audio-helped, or shuffle-leak cases, while items with $N{=}0$ are separated into hard, misleading, or wrong-normal-but-shuffle-correct candidates.
 For the train split, these buckets determine which samples are used for SFT; for the development split, the same diagnostic is reported only for analysis and model selection, and no development or evaluation samples are removed when computing scores.
 The goal was not to create a perfect taxonomy, but to separate samples likely solved by text priors from samples where the model depends on the audio.
-Table~\ref{tab:buckets} shows the resulting bucket distribution.
+Table~\ref{tab:bucket_rules} summarizes the rule, and Table~\ref{tab:buckets} shows the resulting bucket distribution.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Diagnostic bucket rules. $N$, $E$, and $S$ indicate whether the base model answers correctly with the normal audio-question pair, empty audio, and shuffled audio. Rows are mutually exclusive.}
+\label{tab:bucket_rules}
+\begin{tabular}{lccc}
+\toprule
+Bucket & $N$ & $E$ & $S$ \\
+\midrule
+Easy text-prior variants & 1 & 1 & * \\
+Audio-helped / shuffle-leak & 1 & 0 & 1 \\
+Strong audio-dependent & 1 & 0 & 0 \\
+Hard audio-dependent candidate & 0 & 0 & 0 \\
+Misleading audio or prior-only & 0 & 1 & * \\
+Wrong normal but shuffle correct & 0 & 0 & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table}[t]
 \centering
