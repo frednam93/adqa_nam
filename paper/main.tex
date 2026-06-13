@@ -132,12 +132,16 @@ This analysis also revealed that many development samples are highly prior-drive
 The main supervised fine-tuning set contains only strong audio-dependent training items selected by the three-run diagnostic filter.
 This conservative rule removes easy text-prior samples and excludes normal-wrong hard samples from the primary recipe because their targets may require capabilities the current base model does not reliably expose.
 We also tested broader subsets that include hard audio-dependent candidates, weak/non-easy audio-dependent items, and shuffle-leak items, but these did not improve development accuracy.
+Here, \emph{Strong+hard} adds the hard audio-dependent bucket to the strong bucket, and \emph{Non-easy} adds both hard and shuffle-leak buckets.
 
 To discourage unsupported guessing, we add empty-audio negative examples.
 For these examples, the audio input is removed and the target response is ``Cannot be determined from the audio.''
 The system message is also modified to explicitly allow this unknown response when the audio is missing or insufficient.
-We tested several negative-example ratios, from 2.5\% to 20\% of the positive strong-audio set.
+We tested several negative-example ratios, from 2.5\% to 20\% of the positive set used by each variant.
+For the strong-audio variants, these percentages are measured relative to the 4,738 strong positive examples; for example, 5\% adds 237 unknown-target negatives.
 We additionally tested shuffled-audio unknown examples, where the question is paired with unrelated audio and the target is again the unknown response.
+The combined empty+shuffle 10\% setting adds 5\% empty-audio negatives and 5\% shuffled-audio negatives.
+Finally, the category-balanced broad pool starts from the broad non-easy-style pool with a small easy-prior component, resamples it to make the ten main question categories roughly uniform, and adds 5\% empty-audio unknowns.
 We sweep the negative-example ratio and checkpoint step, using the development set for model selection.
 Table~\ref{tab:data_variants} summarizes the main fine-tuning datasets.
 
@@ -159,8 +163,8 @@ Strong+empty 7.5\% & 5,093 & Strong plus 355 empty-audio unknowns \\
 Strong+empty 10\% & 5,212 & Strong plus 474 empty-audio unknowns \\
 Strong+empty 20\% & 5,686 & Strong plus 948 empty-audio unknowns \\
 Strong+shuffle 5\% & 4,975 & Strong plus shuffled-audio unknowns \\
-Strong+empty+shuffle 10\% & 5,212 & Both negative types \\
-Category-balanced v3 & 10,594 & Approx. balanced categories, 5\% empty \\
+Strong+empty+shuffle 10\% & 5,212 & Strong plus 5\% empty and 5\% shuffled \\
+Category-balanced broad pool & 10,594 & Category-resampled broad pool plus 5\% empty \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -251,8 +255,8 @@ AudioFlamingo3~\cite{goel2025audioflamingo3} rerun & 54.32 & -- \\
 Answer-only Qwen SFT, 9k & 62.85 & -- \\
 Silent CoT SFT, 3k & 61.05 & -- \\
 Explicit CoT SFT, 3k & 58.49 & -- \\
-Category-balanced v3 & 64.09 & -- \\
-Catbalmix10, ckpt2000 & 65.21 & -- \\
+Category-balanced broad pool & 64.09 & -- \\
+Strong+10\% cat-balanced mix & 65.21 & -- \\
 Empty5 repeat, seed2 best & 64.16 & -- \\
 Empty5 repeat, seed3 best & 65.21 & -- \\
 SimPO~\cite{meng2024simpo} continuation, 500 & \textbf{65.65} & \textbf{66.96} \\
@@ -269,7 +273,9 @@ The early answer-only Qwen3 fine-tuning runs degraded the base model, even thoug
 Category-level model routing provided only a small oracle gain: choosing the best model per rule-based category would reach 66.83\%, compared with 65.90\% for Qwen3-Omni base.
 The much higher per-sample oracle of 90.85\% indicates complementary errors, but coarse category routing alone is insufficient.
 We also tested full category rebalancing and additive category-balanced mixing.
-The best full rebalanced run was category-balanced v3 at 64.09\% strict accuracy, and the best additive variant was strong-empty5 with 10\% category-balanced samples at 65.21\%.
+The full category-balanced broad pool replaces the strong-only positives with the resampled broad pool in Table~\ref{tab:data_variants}.
+The additive mix keeps the strong-empty5 recipe as the main pool but samples 10\% of training rows from the category-balanced broad pool.
+The best full rebalanced run reached 64.09\% strict accuracy, and the best additive variant reached 65.21\%.
 Both remained below the strong-empty recipe.
 Repeating the 5\% empty-audio recipe with two additional random seeds also failed to improve the original run: the best strict accuracies were 64.16\% and 65.21\%.
 Preference/RL continuation also failed to exceed the 5\% empty-audio SFT checkpoint.
