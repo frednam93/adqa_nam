@@ -83,41 +83,23 @@ We define a \emph{strong audio-dependent} item as $N{=}1,E{=}0,S{=}0$: Qwen3-Omn
 Items with $N{=}1$ and at least one counterfactual success are treated as text-prior-like, audio-helped, or shuffle-leak cases, while items with $N{=}0$ are separated into hard, misleading, or wrong-normal-but-shuffle-correct candidates.
 For the train split, these buckets determine which samples are used for SFT; for the development split, the same diagnostic is reported only for analysis and model selection, and no development or evaluation samples are removed when computing scores.
 The goal was not to create a perfect taxonomy, but to separate samples likely solved by text priors from samples where the model depends on the audio.
-Table~\ref{tab:bucket_rules} summarizes the rule, and Table~\ref{tab:buckets} shows the resulting bucket distribution.
+Table~\ref{tab:bucket_summary} summarizes both the bucket rule and the resulting train/development counts.
 
 \begin{table}[t]
 \centering
 \small
-\caption{Diagnostic bucket rules. $N$, $E$, and $S$ indicate whether the base model answers correctly with the normal audio-question pair, empty audio, and shuffled audio. Rows are mutually exclusive.}
-\label{tab:bucket_rules}
-\begin{tabular}{lccc}
+\caption{Diagnostic audio-dependency buckets. $N$, $E$, and $S$ indicate whether the base model answers correctly with the normal audio-question pair, empty audio, and shuffled audio. Rows are mutually exclusive; * means either value.}
+\label{tab:bucket_summary}
+\begin{tabular}{lcccrr}
 \toprule
-Bucket & $N$ & $E$ & $S$ \\
+Bucket & $N$ & $E$ & $S$ & Train & Dev \\
 \midrule
-Easy text-prior variants & 1 & 1 & * \\
-Audio-helped / shuffle-leak & 1 & 0 & 1 \\
-Strong audio-dependent & 1 & 0 & 0 \\
-Hard audio-dependent candidate & 0 & 0 & 0 \\
-Misleading audio or prior-only & 0 & 1 & * \\
-Wrong normal but shuffle correct & 0 & 0 & 1 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[t]
-\centering
-\caption{Audio-dependency buckets from Qwen3-Omni diagnostic runs. Train buckets use the full train split; development buckets use the official development set.}
-\label{tab:buckets}
-\begin{tabular}{lrr}
-\toprule
-Bucket & Train & Dev \\
-\midrule
-Easy text-prior variants & 10648 & 402 \\
-Strong audio-dependent & 4738 & 374 \\
-Audio-helped / shuffle-leak & 1712 & 283 \\
-Hard audio-dependent candidate & 1312 & 318 \\
-Misleading audio or prior-only & 793 & 95 \\
-Wrong normal but shuffle correct & 277 & 135 \\
+Easy text-prior variants & 1 & 1 & * & 10648 & 402 \\
+Audio-helped / shuffle-leak & 1 & 0 & 1 & 1712 & 283 \\
+Strong audio-dependent & 1 & 0 & 0 & 4738 & 374 \\
+Hard audio-dependent candidate & 0 & 0 & 0 & 1312 & 318 \\
+Misleading audio or prior-only & 0 & 1 & * & 793 & 95 \\
+Wrong normal but shuffle correct & 0 & 0 & 1 & 277 & 135 \\
 \bottomrule
 \end{tabular}
 \end{table}
