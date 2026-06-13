@@ -27,7 +27,8 @@ The task differs from generic audio captioning or audio tagging because the mode
 In preliminary experiments, we observed that strong open audio-language models often answer a large fraction of samples correctly even when the audio is removed.
 This motivated an audio-dependency-aware training recipe inspired by audio contribution analysis in AudioMCQ~\cite{he2026audiomcq}: we explicitly identify training samples for which the audio appears necessary, then fine-tune primarily on those items.
 
-\section{System Overview}
+\section{Method}
+\subsection{Base Model, Fine-Tuning, and Inference}
 All systems use Qwen3-Omni-30B-A3B-Instruct~\cite{qwen3omni2025,qwen3omnihf}.
 We fine-tune with LLaMA-Factory~\cite{zheng2024llamafactory} using 4-bit bitsandbytes quantization and LoRA~\cite{hu2021lora} with rank 4, alpha 8, dropout 0.05, and trainable query and value projections only.
 Training uses bfloat16, per-device batch size 8, no gradient accumulation, learning rate $5\times10^{-5}$, cosine scheduling, 3\% warmup, cutoff length 2048, and 2000--3000 maximum update steps depending on the submitted system.
@@ -42,7 +43,7 @@ For single-model submissions we use base Qwen3-Omni as the normalizer; for the t
 The smaller normalizer is a size-constrained compromise: on the development set it recovered fewer parse-failed answers than the base Qwen3-Omni normalizer, but it allowed us to submit a three-model ensemble within the challenge limit.
 The normalizer sees only the candidate choices and the raw generation; it does not receive the audio or the ground-truth label.
 
-\section{Prompting and Input Variants}
+\subsection{Prompting and Diagnostic Input Variants}
 The default training and inference prompt presents the audio, the question, and four option texts.
 The user instruction is to choose the correct option and answer with only the exact option text, rather than a letter.
 This exact-option format was chosen because it gave substantially fewer unrecoverable outputs than letter-only or explicit reasoning prompts in our experiments.
@@ -73,7 +74,7 @@ Generic prompt & 16.24 & 4.36 \\
 \end{tabular}
 \end{table}
 
-\section{Diagnostic Audio-Dependency Analysis}
+\subsection{Audio-Dependency Buckets}
 \label{sec:diagnostics}
 Before fine-tuning, we ran diagnostic inference on train and development samples under multiple conditions: normal audio-question pairs, empty-audio questions, and shuffled-audio questions.
 For each sample, we parse the model's multiple-choice answer in each condition and record whether it matches the ground-truth answer.
@@ -110,7 +111,7 @@ The development set contains 374 strong audio-dependent items, approximately 23.
 High-volume categories include speaker identity, speech content, temporal reasoning, speech paralinguistics, music, and sound events.
 This analysis also revealed that many development samples are highly prior-driven; therefore, optimizing only for the aggregate score can favor models that preserve text-prior behavior rather than models that improve audio grounding.
 
-\section{Fine-Tuning Data Construction}
+\subsection{Fine-Tuning Data Construction}
 The main supervised fine-tuning set contains only strong audio-dependent training items selected by the three-run diagnostic filter.
 This conservative rule removes easy text-prior samples and excludes normal-wrong hard samples from the primary recipe because their targets may require capabilities the current base model does not reliably expose.
 We also tested broader subsets that include hard audio-dependent candidates, weak/non-easy audio-dependent items, and shuffle-leak items, but these did not improve development accuracy.
@@ -145,8 +146,8 @@ Strong+empty 7.5\% & 5,093 & Strong plus 355 empty-audio unknowns \\
 Strong+empty 10\% & 5,212 & Strong plus 474 empty-audio unknowns \\
 Strong+empty 20\% & 5,686 & Strong plus 948 empty-audio unknowns \\
 Strong+shuffle 5\% & 4,975 & Strong plus shuffled-audio unknowns \\
-Strong+empty+shuffle 10\% & 5,212 & Strong plus 5\% empty and 5\% shuffled \\
-Category-balanced broad pool & 10,594 & Category-resampled broad pool plus 5\% empty \\
+Strong+empty 5\%+shuffle 5\% & 5,212 & Strong plus 5\% empty and 5\% shuffled \\
+Category-balanced & 10,594 & Category-resampled broad pool plus 5\% empty \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -172,7 +173,7 @@ Strong + empty 5\% & 3000 & 65.28 & 66.52 \\
 Strong + empty 7.5\% & 2500 & 65.34 & 66.52 \\
 Strong + empty 10\% & 1000 & 64.90 & 66.15 \\
 Strong + empty 20\% & 3000 & 65.09 & 66.21 \\
-Strong + empty+shuffle 10\% & 1000 & 64.97 & 66.27 \\
+Strong + empty 5\% + shuffle 5\% & 1000 & 64.97 & 66.27 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -206,9 +207,9 @@ Non-easy & 3000 & 60.55 & 61.61 \\
 Non-easy+empty 5\% & 1000 & 62.91 & 64.22 \\
 Non-easy+empty 5\% & 3000 & 62.35 & 63.53 \\
 Non-easy+shuffle 5\% & 2000 & 61.92 & 63.16 \\
-Non-easy+empty+shuffle 10\% & 3000 & 62.60 & 63.91 \\
+Non-easy+empty 5\%+shuffle 5\% & 3000 & 62.60 & 63.91 \\
 Strong+shuffle 5\% & 3000 & 64.41 & 65.65 \\
-Strong+empty+shuffle 10\% & 1000 & 64.97 & 66.27 \\
+Strong+empty 5\%+shuffle 5\% & 1000 & 64.97 & 66.27 \\
 Strong+empty 2.5\% & 2000 & 65.46 & 66.83 \\
 Strong+empty 2.5\% & 3000 & 65.77 & 67.02 \\
 Strong+empty 5\% & 2000 & \textbf{66.02} & \textbf{67.27} \\
@@ -218,7 +219,7 @@ Strong+empty 20\% & 3000 & 65.09 & 66.21 \\
 \end{tabular}
 \end{table}
 
-\section{Additional Ablations and Failed Directions}
+\subsection{Additional Ablations and Failed Directions}
 \label{sec:failed}
 We evaluated several alternative improvement directions; none replaced the simple strong-audio SFT recipe.
 Table~\ref{tab:failed} lists the main negative results.
@@ -237,7 +238,7 @@ AudioFlamingo3~\cite{goel2025audioflamingo3} rerun & 54.32 & -- \\
 Answer-only Qwen SFT, 9k & 62.85 & -- \\
 Silent CoT SFT, 3k & 61.05 & -- \\
 Explicit CoT SFT, 3k & 58.49 & -- \\
-Category-balanced broad pool & 64.09 & -- \\
+Category-balanced & 64.09 & -- \\
 Strong+10\% cat-balanced mix & 65.21 & -- \\
 Empty5 repeat, seed2 best & 64.16 & -- \\
 Empty5 repeat, seed3 best & 65.21 & -- \\
@@ -255,8 +256,8 @@ The early answer-only Qwen3 fine-tuning runs degraded the base model, even thoug
 Category-level model routing provided only a small oracle gain: choosing the best model per rule-based category would reach 66.83\%, compared with 65.90\% for Qwen3-Omni base.
 The much higher per-sample oracle of 90.85\% indicates complementary errors, but coarse category routing alone is insufficient.
 We also tested full category rebalancing and additive category-balanced mixing.
-The full category-balanced broad pool replaces the strong-only positives with the resampled broad pool in Table~\ref{tab:data_variants}.
-The additive mix keeps the strong-empty5 recipe as the main pool but samples 10\% of training rows from the category-balanced broad pool.
+The category-balanced setting replaces the strong-only positives with the resampled broad pool in Table~\ref{tab:data_variants}.
+The additive mix keeps the strong-empty5 recipe as the main pool but samples 10\% of training rows from the category-balanced pool.
 The best full rebalanced run reached 64.09\% strict accuracy, and the best additive variant reached 65.21\%.
 Both remained below the strong-empty recipe.
 Repeating the 5\% empty-audio recipe with two additional random seeds also failed to improve the original run: the best strict accuracies were 64.16\% and 65.21\%.
@@ -264,7 +265,8 @@ Preference/RL continuation also failed to exceed the 5\% empty-audio SFT checkpo
 The tested preference objectives were DPO~\cite{rafailov2023dpo}, SimPO~\cite{meng2024simpo}, ORPO~\cite{hong2024orpo}, and KTO~\cite{ethayarajh2024kto}; the RL-style objectives were GRPO~\cite{shao2024deepseekmath} and a small DAPO-style variant~\cite{yu2025dapo}.
 ORPO collapsed into invalid outputs in our run, and KTO was not used because the audio metadata path was dropped by the training pipeline.
 
-\section{Error Analysis}
+\section{Discussion}
+\subsection{Error Analysis}
 Comparing the best train-only system with the Qwen3-Omni baseline shows a clear trade-off.
 After response normalization, the fine-tuned model fixes 130 baseline errors but introduces 108 regressions.
 Many gains are in speech, voice, and phonetics, music, counting, and sound-event questions.
@@ -276,7 +278,7 @@ A notable failure mode is that the fine-tuned model can become more conservative
 For example, it improves several hard samples that require counting speakers, identifying subtle voice attributes, or distinguishing sound events, but it can regress on samples where the base model already used a robust prior or memorized common answer pattern.
 Thus, our submitted systems intentionally preserve diversity across the 5\% and 2.5\% empty-negative recipes instead of selecting only one checkpoint.
 
-\section{Submitted Systems}
+\subsection{Submitted Systems}
 We prepare four candidate submissions:
 \begin{itemize}
     \item \textbf{System 1}: train-only strong-audio SFT with 5\% empty-audio negatives at 2000 steps, followed by base Qwen3 response normalization.
