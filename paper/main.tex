@@ -3,7 +3,7 @@
 \usepackage{booktabs}
 \usepackage{url}
 
-\title{Strong-Audio Filtering and Empty-Audio Negative Training for Qwen3-Omni in DCASE 2026 Task 5}
+\title{Learning from Audio-Dependency Errors: Data Curation Strategies Based on Model Confusion Patterns in Audio Question Answering}
 \name{Hyeonuk Nam}
 \address{Independent researcher\\
 Seoul, South Korea\\
@@ -14,8 +14,8 @@ frednam@kaist.ac.kr}
 
 \begin{abstract}
 This technical report describes our system for DCASE 2026 Task 5, Audio-Dependent Question Answering.
-We build on Qwen3-Omni-30B-A3B-Instruct, an open-source large audio-language model, and focus on reducing shortcut reliance on the textual question prior.
-We first run Qwen3-Omni under normal, empty-audio, and shuffled-audio conditions, then bucket samples by the base model's correctness pattern.
+We frame the system as diagnostic data curation for a large audio-language model: before fine-tuning, we probe Qwen3-Omni-30B-A3B-Instruct under normal, empty-audio, and shuffled-audio conditions to identify how the model's answers change when audio evidence is removed or mismatched.
+These model confusion patterns are used to bucket training samples into text-prior, shuffle-leak, strong audio-dependent, and hard or misleading cases.
 Our strongest train-only system fine-tunes only on strong-audio items, where the normal audio-question pair is correct but both counterfactual variants fail, plus a small number of empty-audio negatives and a text-only response normalizer for parse-failed generations.
 On the official development set, the best train-only system reaches 67.27\% accuracy after response normalization, compared with 65.90\% for our local Qwen3-Omni baseline.
 Final submissions additionally include train+development variants and a three-model ensemble with a smaller text-only normalizer.
@@ -25,7 +25,8 @@ Final submissions additionally include train+development variants and a three-mo
 DCASE 2026 Task 5 evaluates audio-dependent multiple-choice question answering on ADQA-Bench~\cite{dcase2026task5}.
 The task differs from generic audio captioning or audio tagging because the model must answer a specific question from the audio, while many choices remain plausible from language priors alone.
 In preliminary experiments, we observed that strong open audio-language models often answer a large fraction of samples correctly even when the audio is removed.
-This motivated an audio-dependency-aware training recipe inspired by audio contribution analysis in AudioMCQ~\cite{he2026audiomcq}: we explicitly identify training samples for which the audio appears necessary, then fine-tune primarily on those items.
+This motivated an audio-dependency-aware training recipe inspired by audio contribution analysis in AudioMCQ~\cite{he2026audiomcq}.
+Rather than treating all labeled examples as equally useful, we use the base model's errors under counterfactual audio conditions as data-curation signals: samples solved without audio are down-weighted or removed, while samples that fail without the correct audio become the main fine-tuning pool.
 
 \section{Method}
 \subsection{Base Model, Fine-Tuning, and Inference}
@@ -294,8 +295,8 @@ Because the development labels are used in Systems 2--4, no held-out development
 
 \section{Conclusion}
 Our final system is a simple Qwen3-Omni LoRA pipeline guided by audio-dependency diagnostics.
-The most effective intervention is not a more complex backbone or RL objective, but careful removal of easy text-prior samples and a small amount of empty-audio negative training.
-Although the improvements are modest, the experiments suggest that explicit audio-dependency filtering is a practical way to adapt large audio-language models for ADQA-style evaluation.
+The most effective intervention is not a more complex backbone or RL objective, but data curation based on how the model fails when audio evidence is removed or mismatched.
+Careful removal of easy text-prior samples and a small amount of empty-audio negative training provide modest but consistent gains, suggesting that learning from audio-dependency errors is a practical way to adapt large audio-language models for ADQA-style evaluation.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
