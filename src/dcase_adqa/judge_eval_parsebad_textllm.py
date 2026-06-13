@@ -47,7 +47,7 @@ def parse_letter(text: str, n: int) -> int:
     return letters.index(letter)
 
 
-def load_judge(model_path: Path, load_4bit: bool):
+def load_judge(model_path: str, load_4bit: bool):
     tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     kwargs = {
         "trust_remote_code": True,
@@ -92,7 +92,7 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--pred", type=Path, action="append", required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--model", type=Path, default=Path("/home/user/ssdmain/models/dcase_adqa/qwen3_8b"))
+    parser.add_argument("--model", default=os.environ.get("QWEN35_JUDGE_MODEL", "Qwen/Qwen3-8B"))
     parser.add_argument("--tag", default="qwen3_8b_judge")
     parser.add_argument("--max-new-tokens", type=int, default=8)
     parser.add_argument("--load-4bit", action="store_true", default=True)

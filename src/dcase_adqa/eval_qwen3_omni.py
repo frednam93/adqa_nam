@@ -164,7 +164,7 @@ def choose_letter_prediction(generation: str, choices: list[str]) -> tuple[int, 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--model", type=Path, default=Path("/home/user/ssdmain/models/dcase_adqa/qwen3_omni_30b_a3b_instruct"))
+    parser.add_argument("--model", default=os.environ.get("QWEN3_OMNI_MODEL", "Qwen/Qwen3-Omni-30B-A3B-Instruct"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--adapter", type=Path, default=None)
     parser.add_argument("--limit", type=int, default=None)

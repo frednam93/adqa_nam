@@ -1,5 +1,5 @@
 ### model
-model_name_or_path: /home/user/ssdmain/models/dcase_adqa/qwen3_omni_30b_a3b_instruct
+model_name_or_path: ${QWEN3_OMNI_MODEL}
 trust_remote_code: true
 quantization_bit: 4
 quantization_method: bnb
@@ -20,20 +20,19 @@ print_param_status: false
 upcast_layernorm: true
 
 ### dataset
-dataset: dcase_adqa_qwen3_omni_train
-dataset_dir: /home/user/ssdmain/dcase-adqa/external/Fun-Audio-Chat/training/data
+dataset: dcase_adqa_qwen3_final_train_dev_strong_empty5
+dataset_dir: ${FUN_AUDIO_CHAT_ROOT}/training/data
 template: qwen3_omni_nothink
 cutoff_len: 2048
-max_samples: 16
 overwrite_cache: true
-preprocessing_num_workers: 2
-dataloader_num_workers: 1
+preprocessing_num_workers: 4
+dataloader_num_workers: 2
 
 ### output
-output_dir: /home/user/ssdmain/dcase-adqa/outputs/qwen3_omni_qlora_smoke
-logging_steps: 1
+output_dir: ${OUTPUT_ROOT}/qwen3_omni_lora
+logging_steps: 10
 save_strategy: steps
-save_steps: 5
+save_steps: 1000
 plot_loss: true
 overwrite_output_dir: true
 save_only_model: false
@@ -43,9 +42,9 @@ report_to: none
 per_device_train_batch_size: 8
 gradient_accumulation_steps: 1
 learning_rate: 5.0e-5
-max_steps: 4
+max_steps: 2000
 lr_scheduler_type: cosine
-warmup_ratio: 0.1
+warmup_ratio: 0.03
 bf16: true
 ddp_timeout: 180000000
 disable_gradient_checkpointing: false

@@ -23,14 +23,18 @@ def clean_prediction(row: dict, item: dict, fallback_index: int = 0) -> tuple[in
     choices = item.get("choices") or item.get("multi_choice")
     if choices is None:
         raise KeyError(f"manifest row {item.get('id')} has neither choices nor multi_choice")
+    valid = [(i, str(choice)) for i, choice in enumerate(choices) if str(choice).strip()]
+    if not valid:
+        raise ValueError(f"manifest row {item.get('id')} has no non-empty choices")
     idx = row.get("judge_prediction_index", row.get("prediction_index", -1))
-    if isinstance(idx, int) and 0 <= idx < len(choices):
+    if isinstance(idx, int) and 0 <= idx < len(choices) and str(choices[idx]).strip():
         return idx, choices[idx], "parsed"
     pred = str(row.get("judge_prediction", row.get("prediction", ""))).strip()
-    for i, choice in enumerate(choices):
+    for i, choice in valid:
         if pred.lower() == choice.lower():
             return i, choice, "exact_text"
-    return fallback_index, choices[fallback_index], "fallback"
+    fallback = fallback_index if any(i == fallback_index for i, _ in valid) else valid[0][0]
+    return fallback, choices[fallback], "fallback"
 
 
 def single(pred: Path, manifest: Path, output_csv: Path, output_jsonl: Path | None) -> dict:

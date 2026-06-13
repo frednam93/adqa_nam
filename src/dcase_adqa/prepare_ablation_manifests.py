@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 from collections import defaultdict
 from pathlib import Path
@@ -79,19 +80,22 @@ def stratified_subset(rows: list[dict], per_category: int, rng: random.Random) -
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--dev-manifest", type=Path, default=Path("/home/user/ssdmain/datasets/dcase2026_task5/manifests/dev.jsonl"))
-    p.add_argument("--train-manifest", type=Path, default=Path("/home/user/ssdmain/datasets/dcase2026_task5/manifests/train.jsonl"))
-    p.add_argument("--out-dir", type=Path, default=Path("/home/user/ssdmain/dcase-adqa/outputs/ablation_manifests"))
+    data_root = Path(os.environ.get("DCASE_TASK5_ROOT", "data/dcase2026_task5"))
+    output_root = Path(os.environ.get("OUTPUT_ROOT", "outputs"))
+    p.add_argument("--dev-manifest", type=Path, default=data_root / "manifests/dev.jsonl")
+    p.add_argument("--train-manifest", type=Path, default=data_root / "manifests/train.jsonl")
+    p.add_argument("--out-dir", type=Path, default=output_root / "ablation_manifests")
     p.add_argument("--train-per-category", type=int, default=80)
     p.add_argument("--seed", type=int, default=20260522)
     args = p.parse_args()
 
     rng = random.Random(args.seed)
     dev = load_jsonl(args.dev_manifest)
-    train = stratified_subset(load_jsonl(args.train_manifest), args.train_per_category, rng)
+    train_full = load_jsonl(args.train_manifest)
+    train = stratified_subset(train_full, args.train_per_category, rng)
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
-    sets = {"dev_full": dev, f"train_strat{args.train_per_category}": train}
+    sets = {"dev_full": dev, f"train_strat{args.train_per_category}": train, "train_full": train_full}
     for prefix, rows in sets.items():
         write_jsonl(args.out_dir / f"{prefix}_normal.jsonl", rows)
         write_jsonl(args.out_dir / f"{prefix}_choice_shuffle.jsonl", shuffled_choices(rows, rng))
@@ -99,7 +103,7 @@ def main() -> None:
             write_jsonl(args.out_dir / f"{prefix}_shuffle_audio_{mode}.jsonl", shuffled_audio(rows, rng, mode))
 
     print(f"wrote {args.out_dir}")
-    print(f"dev={len(dev)} train_stratified={len(train)}")
+    print(f"dev={len(dev)} train_stratified={len(train)} train_full={len(train_full)}")
 
 
 if __name__ == "__main__":

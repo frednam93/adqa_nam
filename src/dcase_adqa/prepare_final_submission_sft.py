@@ -3,17 +3,25 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import random
 from pathlib import Path
 
-from dcase_adqa.prepare_empty5_stability import make_empty_item
+from dcase_adqa.build_full_audio_dependency_sft import UNKNOWN_SYSTEM, UNKNOWN_TARGET
 from dcase_adqa.prepare_qwen3_omni_sft import convert_item, load_jsonl
 
-ROOT = Path("/home/user/ssdmain/dcase-adqa")
-FAC = ROOT / "external/Fun-Audio-Chat"
-DATA_INFO = FAC / "training/data/dataset_info.json"
-BASE_CONFIG = FAC / "training/configs/dcase_adqa_qwen3_omni_qlora.yaml"
-DEFAULT_OUT_DIR = Path("/home/user/ssdmain/datasets/dcase2026_task5/qwen3_omni_sft_final_submission")
+
+def env_path(name: str, default: str) -> Path:
+    return Path(os.environ.get(name, default))
+
+
+def make_empty_item(item: dict, target: str = UNKNOWN_TARGET) -> dict:
+    converted = convert_item(item, "answer_only")
+    converted["system"] = UNKNOWN_SYSTEM
+    converted["messages"][0]["content"] = converted["messages"][0]["content"].replace("<audio>\n", "")
+    converted["messages"][-1]["content"] = target
+    converted["audios"] = []
+    return converted
 
 
 def read_bucket_ids(path: Path, bucket_name: str = "strong_audio_dependent") -> list[str]:
@@ -32,21 +40,24 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-def register_dataset(name: str, train_path: Path) -> None:
-    info = json.loads(DATA_INFO.read_text(encoding="utf-8"))
+def register_dataset(data_info: Path, name: str, train_path: Path) -> None:
+    data_info.parent.mkdir(parents=True, exist_ok=True)
+    info = json.loads(data_info.read_text(encoding="utf-8")) if data_info.exists() else {}
     info[name] = {
         "file_name": str(train_path),
         "formatting": "sharegpt",
         "columns": {"system": "system", "messages": "messages", "audios": "audios"},
         "tags": {"role_tag": "role", "content_tag": "content", "user_tag": "user", "assistant_tag": "assistant"},
     }
-    DATA_INFO.write_text(json.dumps(info, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    data_info.write_text(json.dumps(info, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def write_config(dataset_name: str, output_dir: Path, steps: int, save_steps: int) -> Path:
-    config_path = FAC / f"training/configs/{dataset_name}_{steps}.yaml"
+def write_config(base_config: Path, config_dir: Path, dataset_name: str, output_dir: Path, steps: int, save_steps: int) -> Path:
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / f"{dataset_name}_{steps}.yaml"
     lines: list[str] = []
-    for line in BASE_CONFIG.read_text(encoding="utf-8").splitlines():
+    for line in base_config.read_text(encoding="utf-8").splitlines():
+        line = os.path.expandvars(line)
         if line.startswith("dataset:"):
             lines.append(f"dataset: {dataset_name}")
         elif line.startswith("output_dir:"):
@@ -68,11 +79,17 @@ def write_config(dataset_name: str, output_dir: Path, steps: int, save_steps: in
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--train-manifest", type=Path, default=Path("/home/user/ssdmain/datasets/dcase2026_task5/manifests/train.jsonl"))
-    p.add_argument("--dev-manifest", type=Path, default=Path("/home/user/ssdmain/datasets/dcase2026_task5/manifests/dev.jsonl"))
-    p.add_argument("--train-buckets", type=Path, default=ROOT / "outputs/analysis/audio_dependency_full/train_full_audio_dependency_buckets.csv")
-    p.add_argument("--dev-buckets", type=Path, default=ROOT / "outputs/analysis/audio_dependency/dev_audio_dependency_buckets.csv")
-    p.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
+    repo_root = Path(__file__).resolve().parents[2]
+    data_root = env_path("DCASE_TASK5_ROOT", "data/dcase2026_task5")
+    output_root = env_path("OUTPUT_ROOT", "outputs")
+    fun_audio_root = env_path("FUN_AUDIO_CHAT_ROOT", "external/Fun-Audio-Chat")
+    p.add_argument("--train-manifest", type=Path, default=data_root / "manifests/train.jsonl")
+    p.add_argument("--dev-manifest", type=Path, default=data_root / "manifests/dev.jsonl")
+    p.add_argument("--train-buckets", type=Path, default=output_root / "analysis/audio_dependency_full/train_full_audio_dependency_buckets.csv")
+    p.add_argument("--dev-buckets", type=Path, default=output_root / "analysis/audio_dependency/dev_audio_dependency_buckets.csv")
+    p.add_argument("--out-dir", type=Path, default=data_root / "qwen3_omni_sft_final_submission")
+    p.add_argument("--fun-audio-root", type=Path, default=fun_audio_root)
+    p.add_argument("--base-config", type=Path, default=repo_root / "external_overrides/Fun-Audio-Chat/training/configs/dcase_adqa_qwen3_omni_qlora.template.yaml")
     p.add_argument("--seed", type=int, default=20260606)
     p.add_argument("--empty-ratio", type=float, default=0.05)
     p.add_argument("--run-suffix", default=None)
@@ -104,10 +121,14 @@ def main() -> None:
     run_name = f"train_dev_strong_{suffix}"
     train_path = args.out_dir / run_name / "train.jsonl"
     write_jsonl(train_path, data)
-    register_dataset(dataset_name, train_path)
+    data_info = args.fun_audio_root / "training/data/dataset_info.json"
+    register_dataset(data_info, dataset_name, train_path)
+    run_output_dir = output_root / f"final_submission/qwen3_{run_name}_{args.steps // 1000}k"
     config_path = write_config(
+        base_config=args.base_config,
+        config_dir=args.fun_audio_root / "training/configs",
         dataset_name=dataset_name,
-        output_dir=ROOT / f"outputs/final_submission/qwen3_{run_name}_{args.steps // 1000}k",
+        output_dir=run_output_dir,
         steps=args.steps,
         save_steps=1000,
     )
@@ -116,7 +137,7 @@ def main() -> None:
         "dataset_name": dataset_name,
         "train_path": str(train_path),
         "config_path": str(config_path),
-        "output_dir": str(ROOT / f"outputs/final_submission/qwen3_{run_name}_{args.steps // 1000}k"),
+        "output_dir": str(run_output_dir),
         "train_strong": len(train_ids),
         "dev_strong": len(dev_ids),
         "positives": len(positive_items),

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import random
 from collections import Counter
 from pathlib import Path
@@ -55,11 +56,13 @@ def bucket(normal: bool, empty: bool, shuffle: bool) -> str:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--train-manifest", type=Path, default=Path("/home/user/ssdmain/dcase-adqa/outputs/ablation_manifests/train_full_normal.jsonl"))
-    p.add_argument("--shuffle-manifest", type=Path, default=Path("/home/user/ssdmain/dcase-adqa/outputs/ablation_manifests/train_full_shuffle_audio_random.jsonl"))
-    p.add_argument("--ablation-dir", type=Path, default=Path("/home/user/ssdmain/dcase-adqa/outputs/ablations/qwen3_base_train_full_min"))
-    p.add_argument("--sft-out-dir", type=Path, default=Path("/home/user/ssdmain/datasets/dcase2026_task5/qwen3_omni_sft_audio_dep_full"))
-    p.add_argument("--analysis-out-dir", type=Path, default=Path("/home/user/ssdmain/dcase-adqa/outputs/analysis/audio_dependency_full"))
+    data_root = Path(os.environ.get("DCASE_TASK5_ROOT", "data/dcase2026_task5"))
+    output_root = Path(os.environ.get("OUTPUT_ROOT", "outputs"))
+    p.add_argument("--train-manifest", type=Path, default=output_root / "ablation_manifests/train_full_normal.jsonl")
+    p.add_argument("--shuffle-manifest", type=Path, default=output_root / "ablation_manifests/train_full_shuffle_audio_random.jsonl")
+    p.add_argument("--ablation-dir", type=Path, default=output_root / "ablations/qwen3_base_train_full_min")
+    p.add_argument("--sft-out-dir", type=Path, default=data_root / "qwen3_omni_sft_audio_dep_full")
+    p.add_argument("--analysis-out-dir", type=Path, default=output_root / "analysis/audio_dependency_full")
     p.add_argument("--seed", type=int, default=20260523)
     args = p.parse_args()
     rng = random.Random(args.seed)

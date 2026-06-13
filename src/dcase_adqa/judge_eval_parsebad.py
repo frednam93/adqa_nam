@@ -44,7 +44,7 @@ def parse_letter(text: str, n: int) -> int:
     return letters.index(letter)
 
 
-def load_base_judge(model_path: Path):
+def load_base_judge(model_path: str):
     config = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
     config.enable_audio_output = False
     qconf = BitsAndBytesConfig(
@@ -101,7 +101,7 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--pred", type=Path, action="append", required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--model", type=Path, default=Path("/home/user/ssdmain/models/dcase_adqa/qwen3_omni_30b_a3b_instruct"))
+    parser.add_argument("--model", default=os.environ.get("QWEN3_OMNI_MODEL", "Qwen/Qwen3-Omni-30B-A3B-Instruct"))
     parser.add_argument("--max-new-tokens", type=int, default=8)
     args = parser.parse_args()
 

@@ -1,8 +1,19 @@
 __pycache__/
 *.pyc
 *.log
-outputs/
 .cache/
 .venv/
 src/*.egg-info/
+
+# Local data, models, outputs, and external checkouts.
+data/
+models/
+outputs/
 external/
+
+# Submission/build artifacts.
+*.zip
+submission/task5/*.pdf
+paper/*.pdf
+hf/local_upload_manifest.json
+.env

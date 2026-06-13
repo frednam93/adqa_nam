@@ -1,88 +1,58 @@
-# DCASE 2026 Task 5 ADQA
+# ADQA Nam
 
-Minimal setup for Audio-Dependent Question Answering experiments.
+Code and paper artifacts for the DCASE 2026 Task 5 Audio-Dependent Question Answering submission, **Learning from Audio-Dependency Errors: Data Curation Strategies Based on Model Confusion Patterns in Audio Question Answering**.
 
-## Data
+This repository intentionally does not include the DCASE data, model checkpoints, or generated predictions. Download datasets and models from their official sources and point the scripts to local paths through environment variables.
 
-- Train: `Harland/AudioMCQ-StrongAC-GeminiCoT`
-- Dev: `Harland/DCASE2026-Task5-DevSet`
-- Local root: `/home/user/ssdmain/datasets/dcase2026_task5`
+## Repository Layout
 
-Download both datasets:
+- `src/dcase_adqa/`: manifest preparation, diagnostic evaluation, SFT data construction, Qwen3-Omni inference, judging, and submission CSV utilities.
+- `scripts/`: thin end-to-end wrappers for data preparation, diagnostics, SFT data generation, evaluation, and submission packaging.
+- `external_overrides/Fun-Audio-Chat/`: minimal patch/template files used with a local Fun-Audio-Chat checkout.
+- `paper/`: DCASE technical report LaTeX source.
+- `submission/`: metadata and post-processing files for DCASE system submission.
 
-```bash
-bash scripts/download_data.sh
-```
-
-Create compact JSONL manifests:
+## Setup
 
 ```bash
-source /home/user/miniconda3/etc/profile.d/conda.sh
-conda activate hf_asr
-python -m dcase_adqa.prepare_manifests \
-  --data-root /home/user/ssdmain/datasets/dcase2026_task5 \
-  --out-dir /home/user/ssdmain/datasets/dcase2026_task5/manifests
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+pip install -r requirements.txt
+cp .env.example .env
 ```
 
-## Baseline Eval
-
-Install model-side dependencies first:
+Edit `.env`:
 
 ```bash
-bash scripts/install_deps.sh
+DCASE_TASK5_ROOT=/path/to/dcase2026_task5
+QWEN3_OMNI_MODEL=Qwen/Qwen3-Omni-30B-A3B-Instruct
+QWEN35_JUDGE_MODEL=Qwen/Qwen3-8B
+FUN_AUDIO_CHAT_ROOT=/path/to/Fun-Audio-Chat
+OUTPUT_ROOT=outputs
 ```
 
-Official DCASE 2026 baselines are Qwen3-Omni, Fun-Audio-Chat, MiMo-Audio, Kimi-Audio, and Step-Audio 2 Mini. Fun-Audio-Chat is the first local baseline target because it is an official baseline and should fit in roughly 24 GB VRAM for inference.
+The scripts source `.env` automatically when present.
 
-Run a small dev subset with Fun-Audio-Chat:
+## Reproduction Workflow
 
 ```bash
-source /home/user/miniconda3/etc/profile.d/conda.sh
-conda activate dcase_adqa
-python -m dcase_adqa.eval_funaudiochat \
-  --manifest /home/user/ssdmain/datasets/dcase2026_task5/manifests/dev.jsonl \
-  --model /home/user/ssdmain/models/dcase_adqa/fun_audio_chat_8b \
-  --limit 20 \
-  --output outputs/funaudiochat_dev20.jsonl
+scripts/00_prepare_manifests.sh
+scripts/01_run_diagnostics.sh
+scripts/02_build_sft_data.sh
+scripts/03_train_systems.sh
+scripts/04_eval_and_package.sh
 ```
 
-Qwen2-Audio is kept only as a local harness sanity check, not as a reported DCASE 2026 baseline:
+The training wrapper expects a local Fun-Audio-Chat checkout with the Qwen3-Omni multimodal SFT patch applied. It writes dataset registration and config files into that checkout, then launches its training entry point.
 
-```bash
-source /home/user/miniconda3/etc/profile.d/conda.sh
-conda activate dcase_adqa
-python -m dcase_adqa.eval_qwen2_audio \
-  --manifest /home/user/ssdmain/datasets/dcase2026_task5/manifests/dev.jsonl \
-  --limit 20 \
-  --model Qwen/Qwen2-Audio-7B-Instruct \
-  --output outputs/qwen2_audio_dev20.jsonl
-```
+## Final Systems
 
-The eval script uses exact answer matching against the candidate text and stores raw generations for debugging.
+The submitted systems are Qwen3-Omni LoRA variants trained on audio-dependency-filtered data. The strongest training buckets were selected by comparing base-model behavior under normal audio, empty audio, and shuffled-audio diagnostics. Final CSVs are produced from model predictions using exact MCQ choice normalization, optional judge-based parse repair, and ensemble tie-breaking.
 
-## Extra Open ALM Eval
+## Release Notes
 
-The extra open-ALM targets are isolated from the active FunAudio/Qwen3 training
-environment because Audio Flamingo 3 requires a newer Transformers build and
-Nemotron is best served through vLLM.
-
-```bash
-bash scripts/install_open_alm_deps.sh
-bash scripts/download_open_alm_models.sh
-```
-
-Audio Flamingo 3:
-
-```bash
-bash scripts/eval_audioflamingo3_dev.sh --limit 20
-```
-
-Nemotron 3 Nano Omni:
-
-```bash
-bash scripts/serve_nemotron3_nano_omni_vllm.sh
-bash scripts/eval_nemotron3_nano_omni_dev.sh --limit 20
-```
-
-`Qwen3.5-Omni` is tracked as a placeholder only; no public/local weights are
-configured yet.
+- Do not commit datasets, checkpoints, adapters, or generated predictions.
+- Place future public adapters on Hugging Face and link them from this README.
+- Dataset access should redirect users to the official DCASE/Hugging Face dataset pages.
+- The code is released under the repository license; model adapters inherit the restrictions of the base model and challenge data terms.

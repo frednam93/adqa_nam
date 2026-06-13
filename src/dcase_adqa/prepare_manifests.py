@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from datasets import load_dataset
@@ -66,8 +67,9 @@ def write_manifest(split: str, repo: str, hf_split: str, data_root: Path, out_di
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-root", type=Path, default=Path("/home/user/ssdmain/datasets/dcase2026_task5"))
-    parser.add_argument("--out-dir", type=Path, default=Path("/home/user/ssdmain/datasets/dcase2026_task5/manifests"))
+    default_root = Path(os.environ.get("DCASE_TASK5_ROOT", "data/dcase2026_task5"))
+    parser.add_argument("--data-root", type=Path, default=default_root)
+    parser.add_argument("--out-dir", type=Path, default=default_root / "manifests")
     args = parser.parse_args()
 
     for split, (repo, hf_split) in DATASETS.items():
