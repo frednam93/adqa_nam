@@ -96,6 +96,7 @@ def main() -> None:
     parser.add_argument("--tag", default="qwen3_8b_judge")
     parser.add_argument("--max-new-tokens", type=int, default=8)
     parser.add_argument("--load-4bit", action="store_true", default=True)
+    parser.add_argument("--no-load-4bit", action="store_false", dest="load_4bit")
     args = parser.parse_args()
 
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
