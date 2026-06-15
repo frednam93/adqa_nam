@@ -1,8 +1,8 @@
 # Submission information for DCASE 2026 Task 5
 submission:
   label: Nam_IND_task5_4
-  name: Qwen3-Omni ABC Ensemble with Small Judge
-  abbreviation: Q3-ABC-SJ
+  name: Qwen3-Omni ABC Ensemble with Gemma Judge
+  abbreviation: Q3-ABC-GJ
 
 authors:
   - lastname: Nam
@@ -18,11 +18,11 @@ authors:
 system:
   end_to_end: false
   pretrained: true
-  pre_loaded: Qwen3-Omni-30B-A3B-Instruct; Qwen3.5-9B
+  pre_loaded: Qwen3-Omni-30B-A3B-Instruct; Gemma-4-E4B-it
   autoregressive_model: true
-  model_size: 99B
+  model_size: 94B
   light_weighted: false
-  post_processing: Qwen3.5-9B text-only response normalization on parse-failed outputs followed by three-model voting over systems 1, 2, and 3; remaining three-way ties are broken by system 2.
+  post_processing: Gemma-4-E4B-it text-only response normalization on parse-failed outputs followed by three-model voting over systems 1, 2, and 3; remaining three-way ties are broken by system 2.
   external_data_resources: []
 
 results:

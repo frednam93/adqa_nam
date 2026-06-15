@@ -40,8 +40,8 @@ The training and evaluation code will be released at \url{https://github.com/fre
 For selected submissions, raw generations are post-processed in two stages.
 First, deterministic parsing checks exact option-text matches and simple letter or prefix patterns.
 Second, parse-failed responses are passed to a text-only multiple-choice response normalizer.
-For single-model submissions we use base Qwen3-Omni as the normalizer; for the three-model ensemble we use Qwen3.5-9B so that the total model size remains below the 100B system limit.
-The smaller normalizer is a size-constrained compromise: on the development set it recovered fewer parse-failed answers than the base Qwen3-Omni normalizer, but it allowed us to submit a three-model ensemble within the challenge limit.
+For single-model submissions we use base Qwen3-Omni as the normalizer; for the three-model ensemble we use Gemma-4-E4B-it so that the total model size remains below the 100B system limit.
+The Gemma normalizer is a size-constrained compromise: on the development set it closely matched the base Qwen3-Omni normalizer while allowing us to submit a three-model ensemble within the challenge limit.
 The normalizer sees only the candidate choices and the raw generation; it does not receive the audio or the ground-truth label.
 
 \subsection{Prompting and Diagnostic Input Variants}
@@ -287,9 +287,9 @@ We prepare four candidate submissions:
     \item \textbf{System 1}: train-only strong-audio SFT with 5\% empty-audio negatives at 2000 steps, followed by base Qwen3 response normalization.
     \item \textbf{System 2}: train+development strong-audio SFT with 5\% empty-audio negatives at 2000 steps, followed by base Qwen3 response normalization.
     \item \textbf{System 3}: train+development strong-audio SFT with 2.5\% empty-audio negatives at 3000 steps, followed by base Qwen3 response normalization.
-    \item \textbf{System 4}: an ensemble of Systems 1, 2, and 3. Parse-failed outputs are normalized by Qwen3.5-9B, then the three systems vote. If all three systems disagree, System 2 is used as the tie breaker.
+    \item \textbf{System 4}: an ensemble of Systems 1, 2, and 3. Parse-failed outputs are normalized by Gemma-4-E4B-it, then the three systems vote. If all three systems disagree, System 2 is used as the tie breaker.
 \end{itemize}
-System 4 is a diversity-oriented candidate rather than a confirmed improvement: its vote may reduce model-specific errors, but its Qwen3.5-9B normalizer is weaker than the base Qwen3-Omni normalizer.
+System 4 is a diversity-oriented candidate rather than a confirmed improvement: its vote may reduce model-specific errors, while its Gemma-4-E4B-it normalizer keeps the ensemble within the challenge size limit.
 Systems 2 and 3 combine 4,738 train strong-audio items with 374 development strong-audio items; after empty-audio negatives, they contain 5,368 and 5,240 SFT examples, respectively.
 Because the development labels are used in Systems 2--4, no held-out development score is reported for those final variants.
 
