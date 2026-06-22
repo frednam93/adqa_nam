@@ -2,7 +2,10 @@
 
 Code and paper artifacts for the DCASE 2026 Task 5 Audio-Dependent Question Answering submission, **Learning from Audio-Dependency Errors: Data Curation Strategies Based on Model Confusion Patterns in Audio Question Answering**.
 
-This repository intentionally does not include the DCASE data, model checkpoints, or generated predictions. Download datasets and models from their official sources and point the scripts to local paths through environment variables.
+This repository intentionally does not include the DCASE data or generated predictions. Download datasets and models from their official sources and point the scripts to local paths through environment variables.
+
+Public LoRA adapters for the submitted Qwen3-Omni systems are available on Hugging Face:
+https://huggingface.co/frednamfred/adqa_nam_qwen3_omni_lora
 
 ## Repository Layout
 
@@ -52,7 +55,7 @@ The submitted systems are Qwen3-Omni LoRA variants trained on audio-dependency-f
 
 ## Release Notes
 
-- Do not commit datasets, checkpoints, adapters, or generated predictions.
-- Place future public adapters on Hugging Face and link them from this README.
+- Do not commit datasets, local checkpoints, or generated predictions.
+- Public adapters are redirected to Hugging Face: https://huggingface.co/frednamfred/adqa_nam_qwen3_omni_lora
 - Dataset access should redirect users to the official DCASE/Hugging Face dataset pages.
 - The code is released under the repository license; model adapters inherit the restrictions of the base model and challenge data terms.

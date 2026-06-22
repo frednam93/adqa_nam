@@ -1,12 +1,13 @@
-# Hugging Face Release Staging
+# Hugging Face Release
 
-Use this directory for metadata when the DCASE challenge permits public release.
+Public model adapters are hosted at:
 
-Planned contents for each adapter repository:
+https://huggingface.co/frednamfred/adqa_nam_qwen3_omni_lora
 
-- LoRA adapter files from the corresponding local checkpoint.
-- `README.md` model card describing the DCASE Task 5 setup.
-- Link back to the code repository and official DCASE dataset page.
-- No challenge audio files or generated evaluation outputs.
+The model repository contains three Qwen3-Omni LoRA adapter subfolders:
 
-Keep `local_upload_manifest.json` untracked; it may contain machine-local checkpoint paths.
+- `system1_train_only_empty5_2k`
+- `system2_train_dev_empty5_2k`
+- `system3_train_dev_empty2p5_3k`
+
+No DCASE audio files, generated predictions, local checkpoints, optimizer states, or submission archives are uploaded. Keep `local_upload_manifest.json` untracked; it may contain machine-local checkpoint paths.
