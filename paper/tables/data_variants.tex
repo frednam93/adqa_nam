@@ -1,0 +1,24 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{Fine-tuning dataset variants. Counts are training examples after adding negative examples when applicable.}
+\label{tab:data_variants}
+\begin{tabular}{l|rl}
+\toprule
+Variant & Count & Description \\
+\midrule
+Strong & 4,738 & Normal correct; empty/shuffled fail \\
+Strong+hard & 6,050 & Strong + hard \\
+Non-easy & 7,762 & Strong + hard + shuffle-leak \\
+Strong+empty 2.5\% & 4,856 & Strong + 2.5\% empty-audio unknowns \\
+Strong+empty 5\% & 4,975 & Strong + 5\% empty-audio unknowns \\
+Strong+empty 7.5\% & 5,093 & Strong + 7.5\% empty-audio unknowns \\
+Strong+empty 10\% & 5,212 & Strong + 10\% empty-audio unknowns \\
+Strong+empty 20\% & 5,686 & Strong + 20\% empty-audio unknowns \\
+Strong+shuffle 5\% & 4,975 & Strong + shuffled-audio unknowns \\
+Strong+empty 5\%+shuffle 5\% & 5,212 & Strong + 5\% empty + 5\% shuffled \\
+Category-balanced & 10,594 & Category-resampled broad pool + 5\% empty \\
+\bottomrule
+\end{tabular}
+\vspace{-15pt}
+\end{table*}

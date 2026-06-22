@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Qwen3-Omni diagnostic accuracy under counterfactual inputs.}
+\label{tab:diagnostic_scores}
+\begin{tabular}{l|rr}
+\toprule
+Input condition & Dev & Train stratified \\
+\midrule
+Normal audio-question pair & 65.90 & 89.33 \\
+Empty audio & 30.93 & 57.21 \\
+Random shuffled audio & 29.25 & 45.70 \\
+Same-category shuffled audio & 29.87 & 49.58 \\
+Cross-category shuffled audio & 27.44 & 47.27 \\
+Choice order shuffled & \textbf{66.27} & 88.85 \\
+Audio only, no prompt & 15.00 & 8.61 \\
+Generic prompt & 16.24 & 4.36 \\
+\bottomrule
+\end{tabular}
+\vspace{-15pt}
+\end{table}

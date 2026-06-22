@@ -1,0 +1,28 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Representative failed or deprioritized experiments on the development set.}
+\label{tab:failed}
+\begin{tabular}{lrr}
+\toprule
+Experiment & Strict & Judge \\
+\midrule
+FunAudioChat~\cite{funaudiochat2025,funaudiollm2024} base & 54.26 & -- \\
+AudioFlamingo3~\cite{goel2025audioflamingo3} rerun & 54.32 & -- \\
+Answer-only Qwen SFT, 9k & 62.85 & -- \\
+Silent CoT SFT, 3k & 61.05 & -- \\
+Explicit CoT SFT, 3k & 58.49 & -- \\
+Category-balanced & 64.09 & -- \\
+Strong+10\% cat-balanced mix & 65.21 & -- \\
+Empty5 repeat, seed2 best & 64.16 & -- \\
+Empty5 repeat, seed3 best & 65.21 & -- \\
+SimPO~\cite{meng2024simpo} continuation, 500 & \textbf{65.65} & \textbf{66.96} \\
+DPO~\cite{rafailov2023dpo} continuation, 500 & 65.15 & 66.46 \\
+SFT-init GRPO~\cite{shao2024deepseekmath}, 100 & 65.09 & 66.21 \\
+SFT-init DAPO-lite~\cite{yu2025dapo}, 100 & 65.21 & 66.40 \\
+Empty-aware GRPO~\cite{shao2024deepseekmath}, 100 & 65.09 & 66.46 \\
+Empty-aware DAPO-lite~\cite{yu2025dapo}, 100 & 64.72 & 65.90 \\
+\bottomrule
+\end{tabular}
+\vspace{-15pt}
+\end{table}

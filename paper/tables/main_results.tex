@@ -1,0 +1,23 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Main train-only development results.}
+\label{tab:main_results}
+\begin{tabular}{l|rrr}
+\toprule
+System & Step & Strict & Judge \\
+\midrule
+Qwen3-Omni baseline & -- & 65.90 & -- \\
+Strong only & 3000 & 64.97 & 66.21 \\
+Strong + empty 2.5\% & 3000 & 65.77 & 67.02 \\
+Strong + empty 5\% & 1000 & 64.78 & 66.09 \\
+Strong + empty 5\% & 2000 & \textbf{66.02} & \textbf{67.27} \\
+Strong + empty 5\% & 3000 & 65.28 & 66.52 \\
+Strong + empty 7.5\% & 2500 & 65.34 & 66.52 \\
+Strong + empty 10\% & 1000 & 64.90 & 66.15 \\
+Strong + empty 20\% & 3000 & 65.09 & 66.21 \\
+Strong + empty 5\% + shuffle 5\% & 1000 & 64.97 & 66.27 \\
+\bottomrule
+\end{tabular}
+\vspace{-15pt}
+\end{table}

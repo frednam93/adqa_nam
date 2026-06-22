@@ -17,3 +17,5 @@ submission/task5/*.pdf
 paper/*.pdf
 hf/local_upload_manifest.json
 .env
+paper/Learning from Audio-Dependency Errors-*/
+paper/DCASE_Challenge_2025_Task5_Tech_Rep*/

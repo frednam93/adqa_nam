@@ -1,0 +1,31 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Additional Qwen3-Omni SFT ablations.}
+\label{tab:subset_results}
+\begin{tabular}{l|rrr}
+\toprule
+Training variant & Step & Strict & Judge \\
+\midrule
+Strong & 1000 & 63.91 & 65.28 \\
+Strong & 2000 & 64.59 & 65.84 \\
+Strong & 3000 & 64.97 & 66.21 \\
+Strong+hard & 1000 & 61.36 & 62.54 \\
+Strong+hard & 3000 & 61.11 & 62.35 \\
+Non-easy & 1000 & 61.85 & 62.97 \\
+Non-easy & 3000 & 60.55 & 61.61 \\
+Non-easy+empty 5\% & 1000 & 62.91 & 64.22 \\
+Non-easy+empty 5\% & 3000 & 62.35 & 63.53 \\
+Non-easy+shuffle 5\% & 2000 & 61.92 & 63.16 \\
+Non-easy+empty 5\%+shuffle 5\% & 3000 & 62.60 & 63.91 \\
+Strong+shuffle 5\% & 3000 & 64.41 & 65.65 \\
+Strong+empty 5\%+shuffle 5\% & 1000 & 64.97 & 66.27 \\
+Strong+empty 2.5\% & 2000 & 65.46 & 66.83 \\
+Strong+empty 2.5\% & 3000 & 65.77 & 67.02 \\
+Strong+empty 5\% & 2000 & \textbf{66.02} & \textbf{67.27} \\
+Strong+empty 7.5\% & 2500 & 65.34 & 66.52 \\
+Strong+empty 20\% & 3000 & 65.09 & 66.21 \\
+\bottomrule
+\end{tabular}
+\vspace{-15pt}
+\end{table}

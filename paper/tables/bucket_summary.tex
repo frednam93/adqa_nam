@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Diagnostic audio-dependency buckets. $N$, $E$, and $S$ indicate whether the base model answers correctly with the normal audio-question pair, empty audio, and shuffled audio. Rows are mutually exclusive; * means either value.}
+\label{tab:bucket_summary}
+\begin{tabular}{l|ccc|rr}
+\toprule
+Bucket & $N$ & $E$ & $S$ & Train & Dev \\
+\midrule
+Easy text-prior & 1 & 1 & * & 10648 & 402 \\
+Shuffle-leak (audio helped) & 1 & 0 & 1 & 1712 & 283 \\
+Strong audio-dependent & 1 & 0 & 0 & 4738 & 374 \\
+Hard candidate & 0 & 0 & 0 & 1312 & 318 \\
+Misleading or prior-only & 0 & 1 & * & 793 & 95 \\
+Wrong but shuffle correct & 0 & 0 & 1 & 277 & 135 \\
+\bottomrule
+\end{tabular}
+\vspace{-15pt}
+\end{table}
