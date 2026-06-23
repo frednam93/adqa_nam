@@ -4,6 +4,10 @@ Public model adapters are hosted at:
 
 https://huggingface.co/frednamfred/adqa_nam_qwen3_omni_lora
 
+Technical report:
+
+https://arxiv.org/abs/2606.22276
+
 The model repository contains three Qwen3-Omni LoRA adapter subfolders:
 
 - `system1_train_only_empty5_2k`
